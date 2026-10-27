@@ -31,4 +31,5 @@ For deployment, set `DJANGO_SECRET_KEY` to a new, private value and configure `D
 ## CAMBIOS A REALIZAR ##
 
 -Pueden haber múltiples personas con el mismo nombre
+
 -Profesor no tiene la capacidad de eliminar alumnos
