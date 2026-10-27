@@ -1,17 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Diagnóstico Escolar - Inicio</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .hero-section {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            padding: 80px 0;
+            border-radius: 0 0 30px 30px;
+        }
+        .access-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .access-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+    </style>
 </head>
 <body>
-    <a href="{% url 'usuario' %}">
-  <button type="button">Ir a usuario</button>
-    </a>
-    <a href="{% url 'administrador' %}">
-  <button type="button">Ir a Administrador</button>
-    </a>
+
+<!-- HERO / ENCABEZADO PRINCIPAL -->
+<div class="hero-section text-center mb-5">
+    <div class="container">
+        <h1 class="display-4 fw-bold mb-3"> Diagnóstico Escolar</h1>
+        <p class="lead mb-4 mx-auto" style="max-width: 600px;">
+            Plataforma integral de monitoreo académico, análisis de rendimiento y seguimiento de hábitos de estudio.
+        </p>
+    </div>
+</div>
+
+<!-- SECCIÓN DE SELECCIÓN DE PERFIL -->
+<div class="container mb-5">
+    <div class="text-center mb-4">
+        <h3 class="fw-bold text-dark">Selecciona tu Perfil de Acceso</h3>
+        <p class="text-muted">Elige una opción para ingresar al panel correspondiente</p>
+    </div>
+
+    <div class="row justify-content-center g-4">
+        <!-- TARJETA ADMINISTRADOR / PROFESOR -->
+        <div class="col-md-5">
+            <div class="card access-card p-4 bg-white text-center h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="fs-1 mb-3">📊</div>
+                    <h4 class="fw-bold text-primary mb-2">Panel Administrador</h4>
+                    <p class="text-muted small">
+                        Accede a métricas globales de la institución, visualiza promedios generales, gráficos interactivos de edades, tiempos de viaje y la lista general de alumnos.
+                    </p>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'administrador' %}" class="btn btn-primary btn-lg w-100 fw-bold">
+                        Ingresar como Profesor / Adm
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- TARJETA ESTUDIANTE -->
+        <div class="col-md-5">
+            <div class="card access-card p-4 bg-white text-center h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="fs-1 mb-3">🎓</div>
+                    <h4 class="fw-bold text-primary mb-2">Portal Estudiantil</h4>
+                    <p class="text-muted small">
+                        Consulta tu promedio personal, tus calificaciones por asignatura, el progreso del trimestre y revisa tus próximas tareas pendientes.
+                    </p>
+                </div>
+                <div class="mt-4">
+                    <a href="{% url 'usuario' %}" class="btn btn-outline-primary btn-lg w-100 fw-bold">
+                        Ingresar como Estudiante
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="text-center py-4 text-muted border-top bg-white mt-auto">
+    <small>Diagnóstico Escolar &copy; Proyecto Django - Evaluación Certamen 2</small>
+</footer>
 
 </body>
 </html>

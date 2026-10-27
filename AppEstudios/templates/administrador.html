@@ -1,11 +1,246 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Dashboard Administrador - Diagnóstico Escolar</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        .sidebar { 
+            min-height: 100vh; 
+            background-color: #ffffff; 
+            border-right: 1px solid #e9ecef; 
+        }
+        .kpi-card { 
+            border: none; 
+            border-radius: 14px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
+        }
+        .chart-card { 
+            border: none; 
+            border-radius: 14px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
+        }
+        .table-card {
+            border: none;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+    </style>
 </head>
 <body>
-    aca va a haber algo profe lo prometo
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-2 sidebar p-3 d-flex flex-column">
+            <h4 class="text-primary fw-bold mb-4"> Diagnóstico Escolar</h4>
+            <span class="text-uppercase text-muted small fw-bold mb-2">MENÚ</span>
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item mb-2">
+                    <a href="{% url 'index' %}" class="nav-link link-dark">Inicio</a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="{% url 'administrador' %}" class="nav-link active">Dashboard Adm</a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="{% url 'usuario' %}" class="nav-link link-dark">Dashboard Estudiante</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-10 p-4">
+            
+            <!-- Header Superior -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold m-0">General</h3>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark p-2 border"> Administrador</span>
+                </div>
+            </div>
+
+            <!-- 1. SECCIÓN DE KPIs (3 Tarjetas) -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card kpi-card p-3 bg-white">
+                        <span class="text-muted small fw-bold text-uppercase">TOTAL DE ALUMNOS</span>
+                        <h2 class="fw-bold text-primary my-1">{{ kpi_total_estudiantes }} <span class="fs-6 text-muted fw-normal">estudiantes</span></h2>
+                        <span class="text-muted small">Registro activo de alumnos</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card kpi-card p-3 bg-white">
+                        <span class="text-muted small fw-bold text-uppercase">PROMEDIO GENERAL DEL COLEGIO</span>
+                        <h2 class="fw-bold text-dark my-1">{{ kpi_promedio_general }} <span class="fs-6 text-muted fw-normal">/ 7.0</span></h2>
+                        <span class="text-success small">Rendimiento global de la institución</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card kpi-card p-3 bg-white">
+                        <span class="text-muted small fw-bold text-uppercase">TAREAS PENDIENTES</span>
+                        <h2 class="fw-bold text-danger my-1">{{ kpi_tareas_pendientes }}</h2>
+                        <span class="text-danger small">Pendientes de revisión docente</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. SECCIÓN DE GRÁFICOS (4 Gráficos Dinámicos) -->
+            <div class="row mb-4">
+                <div class="col-md-6 mb-4">
+                    <div class="card chart-card p-3 bg-white h-100">
+                        <h6 class="fw-bold text-muted text-center mb-3">Personas por edad</h6>
+                        <canvas id="chartEdades"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card chart-card p-3 bg-white h-100">
+                        <h6 class="fw-bold text-muted text-center mb-3">Promedio por Materia</h6>
+                        <canvas id="chartMateria"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card chart-card p-3 bg-white h-100">
+                        <h6 class="fw-bold text-muted text-center mb-3">Tiempo de Viaje</h6>
+                        <canvas id="chartViaje"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card chart-card p-3 bg-white h-100">
+                        <h6 class="fw-bold text-muted text-center mb-3">Promedio por Semestre</h6>
+                        <canvas id="chartSemestre"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. TABLA DE DATOS (Listado de Alumnos) -->
+            <div class="card table-card p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-1">Listado de Alumnos</h5>
+                <p class="text-muted small mb-3">Información extraída de la base de datos de la plataforma</p>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th># ID</th>
+                                <th>Nombre</th>
+                                <th>Edad</th>
+                                <th>Tiempo de Viaje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for est in estudiantes %}
+                            <tr>
+                                <td>{{ est.id }}</td>
+                                <td class="fw-bold">{{ est.nombre }}</td>
+                                <td>{{ est.edad }} años</td>
+                                <td><span class="badge bg-primary-subtle text-primary border">{{ est.tiempo_viaje }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    No hay estudiantes registrados. Agrega algunos en el panel <code>/admin/</code>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Inyección segura de variables desde Django a JS sin errores sintácticos -->
+{{ g1_labels|json_script:"g1_labels_data" }}
+{{ g1_data|json_script:"g1_data_data" }}
+{{ g2_labels|json_script:"g2_labels_data" }}
+{{ g2_data|json_script:"g2_data_data" }}
+{{ g3_labels|json_script:"g3_labels_data" }}
+{{ g3_data|json_script:"g3_data_data" }}
+{{ g4_labels|json_script:"g4_labels_data" }}
+{{ g4_data|json_script:"g4_data_data" }}
+
+<script>
+    // Recuperar los datos procesados por Django en variables JS nativas
+    const g1Labels = JSON.parse(document.getElementById('g1_labels_data').textContent);
+    const g1Data = JSON.parse(document.getElementById('g1_data_data').textContent);
+
+    const g2Labels = JSON.parse(document.getElementById('g2_labels_data').textContent);
+    const g2Data = JSON.parse(document.getElementById('g2_data_data').textContent);
+
+    const g3Labels = JSON.parse(document.getElementById('g3_labels_data').textContent);
+    const g3Data = JSON.parse(document.getElementById('g3_data_data').textContent);
+
+    const g4Labels = JSON.parse(document.getElementById('g4_labels_data').textContent);
+    const g4Data = JSON.parse(document.getElementById('g4_data_data').textContent);
+
+    // Gráfico 1: Personas por Edad (Barras Verticales)
+    new Chart(document.getElementById('chartEdades'), {
+        type: 'bar',
+        data: {
+            labels: g1Labels,
+            datasets: [{
+                label: 'Cantidad de Alumnos',
+                data: g1Data,
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    // Gráfico 2: Promedio por Materia (Dona)
+    new Chart(document.getElementById('chartMateria'), {
+        type: 'doughnut',
+        data: {
+            labels: g4Labels,
+            datasets: [{
+                data: g4Data,
+                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+            }]
+        },
+        options: { responsive: true }
+    });
+
+    // Gráfico 3: Tiempo de Viaje (Barras Horizontales)
+    new Chart(document.getElementById('chartViaje'), {
+        type: 'bar',
+        data: {
+            labels: g2Labels,
+            datasets: [{
+                label: 'Cantidad de Alumnos',
+                data: g2Data,
+                backgroundColor: '#06b6d4'
+            }]
+        },
+        options: { indexAxis: 'y', responsive: true, scales: { x: { beginAtZero: true } } }
+    });
+
+    // Gráfico 4: Promedio por Semestre (Línea)
+    new Chart(document.getElementById('chartSemestre'), {
+        type: 'line',
+        data: {
+            labels: g3Labels,
+            datasets: [{
+                label: 'Evolución del Promedio',
+                data: g3Data,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: { responsive: true, scales: { y: { min: 1, max: 7 } } }
+    });
+</script>
+
 </body>
 </html>

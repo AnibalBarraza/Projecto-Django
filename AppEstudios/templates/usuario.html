@@ -1,8 +1,211 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Estudiante - Diagnóstico Escolar</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { min-height: 100vh; background-color: #ffffff; border-right: 1px solid #e9ecef; }
+        .kpi-card, .chart-card, .login-card { border: none; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+    </style>
 </head>
 <body>
-    aca va a haber algo profe lo prometo
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-2 sidebar p-3 d-flex flex-column">
+            <h4 class="text-primary fw-bold mb-4"> Diagnóstico Escolar</h4>
+            <span class="text-uppercase text-muted small fw-bold mb-2">MENÚ</span>
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item mb-2">
+                    <a href="{% url 'index' %}" class="nav-link link-dark">Inicio</a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="{% url 'administrador' %}" class="nav-link link-dark">Dashboard Adm</a>
+                </li>
+                <li class="nav-item mb-2">
+                    <a href="{% url 'usuario' %}" class="nav-link active">Dashboard Estudiante</a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-10 p-4">
+
+            {% if mostrar_login %}
+            <!-- PANTALLA DE LOGIN POR NOMBRE -->
+            <div class="row justify-content-center mt-5">
+                <div class="col-md-6 col-lg-5">
+                    <div class="card login-card p-4 bg-white text-center">
+                        <h4 class="fw-bold text-primary mb-2"> Portal Estudiantil</h4>
+                        <p class="text-muted small mb-4">Ingresa tu nombre para acceder a tu dashboard de rendimiento.</p>
+
+                        {% if error_login %}
+                            <div class="alert alert-danger py-2 small" role="alert">
+                                {{ error_login }}
+                            </div>
+                        {% endif %}
+
+                        <form method="POST" action="{% url 'usuario' %}">
+                            {% csrf_token %}
+                            <div class="mb-3 text-start">
+                                <label class="form-label fw-bold small text-muted">Nombre del Estudiante</label>
+                                <input type="text" name="nombre_estudiante" class="form-control" placeholder="Ej: Ignacio" list="estudiantes_sugeridos" required autocomplete="off">
+                                
+                                <!-- Datalist para autocompletar nombres existentes -->
+                                <datalist id="estudiantes_sugeridos">
+                                    {% for est in lista_estudiantes %}
+                                        <option value="{{ est.nombre }}">
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold">Ingresar a mi Portal</button>
+                        </form>
+
+                        <hr class="my-4">
+                        <span class="text-muted small">¿Nombres disponibles en la BD?</span>
+                        <div class="d-flex flex-wrap gap-1 justify-content-center mt-2">
+                            {% for est in lista_estudiantes %}
+                                <span class="badge bg-light text-dark border">{{ est.nombre }}</span>
+                            {% empty %}
+                                <span class="text-danger small">No hay estudiantes en la base de datos. Crea algunos en <code>/admin/</code></span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- DASHBOARD DEL ESTUDIANTE CON SESIÓN ACTIVA -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="fw-bold m-0">Mi Dashboard</h3>
+                    <span class="text-muted small">Bienvenido/a, <strong>{{ estudiante.nombre }}</strong></span>
+                </div>
+                <a href="{% url 'logout_usuario' %}" class="btn btn-outline-secondary btn-sm">
+                    🚪 Cambiar de Estudiante
+                </a>
+            </div>
+
+            <!-- 1. KPIs DEL ESTUDIANTE -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card kpi-card p-3 bg-white">
+                        <span class="text-muted small fw-bold text-uppercase">PROMEDIO GENERAL</span>
+                        <h2 class="fw-bold text-primary my-1">{{ kpi_promedio }} <span class="fs-6 text-muted fw-normal">/ 7.0</span></h2>
+                        <span class="text-success small">Rendimiento académico actual</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card kpi-card p-3 bg-white">
+                        <span class="text-muted small fw-bold text-uppercase">MATERIAS INSCRITAS</span>
+                        <h2 class="fw-bold text-dark my-1">{{ kpi_materias }}</h2>
+                        <span class="text-muted small">Asignaturas registradas</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card kpi-card p-3 bg-white">
+                        <span class="text-muted small fw-bold text-uppercase">TAREAS PENDIENTES</span>
+                        <h2 class="fw-bold text-danger my-1">{{ kpi_tareas }}</h2>
+                        <span class="text-danger small">Pendientes de entrega</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. GRÁFICOS DEL ESTUDIANTE -->
+            <div class="row mb-4">
+                <div class="col-md-6 mb-4">
+                    <div class="card chart-card p-3 bg-white h-100">
+                        <h6 class="fw-bold text-muted text-center mb-3">Mis Calificaciones por Materia</h6>
+                        <canvas id="chartMisNotas"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card chart-card p-3 bg-white h-100">
+                        <h6 class="fw-bold text-muted text-center mb-3">Progreso por Trimestre</h6>
+                        <canvas id="chartProgreso"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. LISTA DE TAREAS -->
+            <div class="card chart-card p-4 bg-white">
+                <h5 class="fw-bold mb-3">Próximas Tareas Pendientes</h5>
+                <ul class="list-group list-group-flush">
+                    {% for tarea in tareas %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <h6 class="mb-0 fw-bold">{{ tarea.titulo }}</h6>
+                            <small class="text-muted">{{ tarea.materia.nombre }}</small>
+                        </div>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border">Entrega: {{ tarea.fecha_entrega }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted text-center py-3">
+                        🎉 ¡No tienes tareas pendientes asignadas!
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+{% if not mostrar_login %}
+<!-- Inyección segura de datos a JS -->
+{{ g1_labels|json_script:"g1_labels_data" }}
+{{ g1_data|json_script:"g1_data_data" }}
+{{ g2_labels|json_script:"g2_labels_data" }}
+{{ g2_data|json_script:"g2_data_data" }}
+
+<script>
+    const g1Labels = JSON.parse(document.getElementById('g1_labels_data').textContent);
+    const g1Data = JSON.parse(document.getElementById('g1_data_data').textContent);
+
+    const g2Labels = JSON.parse(document.getElementById('g2_labels_data').textContent);
+    const g2Data = JSON.parse(document.getElementById('g2_data_data').textContent);
+
+    // Gráfico 1: Mis Calificaciones por Materia
+    new Chart(document.getElementById('chartMisNotas'), {
+        type: 'bar',
+        data: {
+            labels: g1Labels,
+            datasets: [{
+                label: 'Nota Promedio',
+                data: g1Data,
+                backgroundColor: '#6366f1'
+            }]
+        },
+        options: { responsive: true, scales: { y: { min: 1, max: 7 } } }
+    });
+
+    // Gráfico 2: Progreso por Trimestre
+    new Chart(document.getElementById('chartProgreso'), {
+        type: 'line',
+        data: {
+            labels: g2Labels,
+            datasets: [{
+                label: 'Evolución de Notas',
+                data: g2Data,
+                borderColor: '#4f46e5',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                fill: true,
+                tension: 0.2
+            }]
+        },
+        options: { responsive: true, scales: { y: { min: 1, max: 7 } } }
+    });
+</script>
+{% endif %}
+
 </body>
 </html>
