@@ -22,11 +22,13 @@ def administrador(request):
             sala_activa = Sala.objects.filter(id=sala_id).first()
             if sala_activa:
                 nombre = request.POST.get('nombre', '').strip()
+                apellido = request.POST.get('apellido', '').strip()
                 edad = request.POST.get('edad', 15)
                 tiempo_viaje = request.POST.get('tiempo_viaje', '< 15 min')
                 if nombre:
                     Estudiante.objects.create(
                         nombre=nombre,
+                        apellido=apellido,
                         edad=int(edad),
                         tiempo_viaje=tiempo_viaje,
                         sala=sala_activa

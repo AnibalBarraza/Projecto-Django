@@ -16,6 +16,7 @@ class Sala(models.Model):
 
 class Estudiante(models.Model):
     nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
     edad = models.IntegerField()
     
     TIEMPO_VIAJE_CHOICES = [

@@ -8,9 +8,9 @@ class SalaAdmin(admin.ModelAdmin):
 
 @admin.register(Estudiante)
 class EstudianteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'edad', 'tiempo_viaje', 'sala')
+    list_display = ('nombre','apellido', 'edad', 'tiempo_viaje', 'sala')
     list_filter = ('sala', 'tiempo_viaje')
-    search_fields = ('nombre',)
+    search_fields = ('nombre', 'apellido')
 
 @admin.register(Materia)
 class MateriaAdmin(admin.ModelAdmin):
