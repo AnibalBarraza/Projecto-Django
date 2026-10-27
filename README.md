@@ -28,8 +28,7 @@ Open `http://127.0.0.1:8000/`. The administrator and user pages are at `/adminis
 
 For deployment, set `DJANGO_SECRET_KEY` to a new, private value and configure `DEBUG` and `ALLOWED_HOSTS` for the deployment environment. Do not use the local development fallback key in production.
 
-## CAMBIOS A REALIZAR
+## CAMBIOS A REALIZAR ##
 
--Pueden haber multiples personas con el mismo nombre.
--Botón del profesor para eliminar alumno.
--
+-Pueden haber múltiples personas con el mismo nombre
+-Profesor no tiene la capacidad de eliminar alumnos
