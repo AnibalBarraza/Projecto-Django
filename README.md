@@ -30,3 +30,6 @@ For deployment, set `DJANGO_SECRET_KEY` to a new, private value and configure `D
 
 ## CAMBIOS A REALIZAR
 
+-Pueden haber multiples personas con el mismo nombre.
+-Botón del profesor para eliminar alumno.
+-
