@@ -1,9 +1,15 @@
 from django.contrib import admin
-from .models import Estudiante, Materia, Calificacion, Tarea
+from .models import Sala, Estudiante, Materia, Calificacion, Tarea
+
+@admin.register(Sala)
+class SalaAdmin(admin.ModelAdmin):
+    list_display = ('codigo', 'asignatura', 'nombre_profesor')
+    search_fields = ('codigo', 'nombre_profesor', 'asignatura')
 
 @admin.register(Estudiante)
 class EstudianteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'edad', 'tiempo_viaje')
+    list_display = ('nombre', 'edad', 'tiempo_viaje', 'sala')
+    list_filter = ('sala', 'tiempo_viaje')
     search_fields = ('nombre',)
 
 @admin.register(Materia)

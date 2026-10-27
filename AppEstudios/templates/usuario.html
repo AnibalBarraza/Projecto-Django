@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Estudiante - Diagnóstico Escolar</title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -39,12 +37,12 @@
         <div class="col-md-10 p-4">
 
             {% if mostrar_login %}
-            <!-- PANTALLA DE LOGIN POR NOMBRE -->
+            <!-- PANTALLA DE INGRESO CON CÓDIGO DE SALA -->
             <div class="row justify-content-center mt-5">
                 <div class="col-md-6 col-lg-5">
                     <div class="card login-card p-4 bg-white text-center">
                         <h4 class="fw-bold text-primary mb-2"> Portal Estudiantil</h4>
-                        <p class="text-muted small mb-4">Ingresa tu nombre para acceder a tu dashboard de rendimiento.</p>
+                        <p class="text-muted small mb-4">Ingresa tu nombre y el código entregado por tu profesor.</p>
 
                         {% if error_login %}
                             <div class="alert alert-danger py-2 small" role="alert">
@@ -55,45 +53,37 @@
                         <form method="POST" action="{% url 'usuario' %}">
                             {% csrf_token %}
                             <div class="mb-3 text-start">
-                                <label class="form-label fw-bold small text-muted">Nombre del Estudiante</label>
-                                <input type="text" name="nombre_estudiante" class="form-control" placeholder="Ej: Ignacio" list="estudiantes_sugeridos" required autocomplete="off">
-                                
-                                <!-- Datalist para autocompletar nombres existentes -->
-                                <datalist id="estudiantes_sugeridos">
-                                    {% for est in lista_estudiantes %}
-                                        <option value="{{ est.nombre }}">
-                                    {% endfor %}
-                                </datalist>
+                                <label class="form-label fw-bold small text-muted">Tu Nombre</label>
+                                <input type="text" name="nombre_estudiante" class="form-control" placeholder="Ej: Ignacio" required autocomplete="off">
                             </div>
-                            <button type="submit" class="btn btn-primary w-100 fw-bold">Ingresar a mi Portal</button>
-                        </form>
 
-                        <hr class="my-4">
-                        <span class="text-muted small">¿Nombres disponibles en la BD?</span>
-                        <div class="d-flex flex-wrap gap-1 justify-content-center mt-2">
-                            {% for est in lista_estudiantes %}
-                                <span class="badge bg-light text-dark border">{{ est.nombre }}</span>
-                            {% empty %}
-                                <span class="text-danger small">No hay estudiantes en la base de datos. Crea algunos en <code>/admin/</code></span>
-                            {% endfor %}
-                        </div>
+                            <div class="mb-4 text-start">
+                                <label class="form-label fw-bold small text-muted">Código de Sala (Profesor)</label>
+                                <input type="text" name="codigo_sala" class="form-control text-uppercase text-center fw-bold fs-5" placeholder="Ej: A3X9B2" required style="letter-spacing: 2px;">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2">Unirse a la Sala</button>
+                        </form>
                     </div>
                 </div>
             </div>
 
             {% else %}
-            <!-- DASHBOARD DEL ESTUDIANTE CON SESIÓN ACTIVA -->
+            <!-- DASHBOARD DEL ALUMNO DENTRO DE SU SALA -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h3 class="fw-bold m-0">Mi Dashboard</h3>
-                    <span class="text-muted small">Bienvenido/a, <strong>{{ estudiante.nombre }}</strong></span>
+                    <span class="text-muted small">
+                        Alumno: <strong>{{ estudiante.nombre }}</strong> | 
+                        Sala: <strong>{{ estudiante.sala.asignatura }}</strong> (Código: <code>{{ estudiante.sala.codigo }}</code>)
+                    </span>
                 </div>
                 <a href="{% url 'logout_usuario' %}" class="btn btn-outline-secondary btn-sm">
-                    🚪 Cambiar de Estudiante
+                    🚪 Cambiar de Sala / Usuario
                 </a>
             </div>
 
-            <!-- 1. KPIs DEL ESTUDIANTE -->
+            <!-- 1. KPIs -->
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="card kpi-card p-3 bg-white">
@@ -118,7 +108,7 @@
                 </div>
             </div>
 
-            <!-- 2. GRÁFICOS DEL ESTUDIANTE -->
+            <!-- 2. GRÁFICOS -->
             <div class="row mb-4">
                 <div class="col-md-6 mb-4">
                     <div class="card chart-card p-3 bg-white h-100">
@@ -134,7 +124,7 @@
                 </div>
             </div>
 
-            <!-- 3. LISTA DE TAREAS -->
+            <!-- 3. TAREAS -->
             <div class="card chart-card p-4 bg-white">
                 <h5 class="fw-bold mb-3">Próximas Tareas Pendientes</h5>
                 <ul class="list-group list-group-flush">
@@ -161,7 +151,6 @@
 </div>
 
 {% if not mostrar_login %}
-<!-- Inyección segura de datos a JS -->
 {{ g1_labels|json_script:"g1_labels_data" }}
 {{ g1_data|json_script:"g1_data_data" }}
 {{ g2_labels|json_script:"g2_labels_data" }}
@@ -174,34 +163,15 @@
     const g2Labels = JSON.parse(document.getElementById('g2_labels_data').textContent);
     const g2Data = JSON.parse(document.getElementById('g2_data_data').textContent);
 
-    // Gráfico 1: Mis Calificaciones por Materia
     new Chart(document.getElementById('chartMisNotas'), {
         type: 'bar',
-        data: {
-            labels: g1Labels,
-            datasets: [{
-                label: 'Nota Promedio',
-                data: g1Data,
-                backgroundColor: '#6366f1'
-            }]
-        },
+        data: { labels: g1Labels, datasets: [{ label: 'Nota Promedio', data: g1Data, backgroundColor: '#6366f1' }] },
         options: { responsive: true, scales: { y: { min: 1, max: 7 } } }
     });
 
-    // Gráfico 2: Progreso por Trimestre
     new Chart(document.getElementById('chartProgreso'), {
         type: 'line',
-        data: {
-            labels: g2Labels,
-            datasets: [{
-                label: 'Evolución de Notas',
-                data: g2Data,
-                borderColor: '#4f46e5',
-                backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                fill: true,
-                tension: 0.2
-            }]
-        },
+        data: { labels: g2Labels, datasets: [{ label: 'Evolución de Notas', data: g2Data, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.2 }] },
         options: { responsive: true, scales: { y: { min: 1, max: 7 } } }
     });
 </script>

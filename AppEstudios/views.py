@@ -1,102 +1,183 @@
-from django.shortcuts import render,redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Avg, Count
-from .models import Estudiante, Materia, Calificacion, Tarea
+from .models import Sala, Estudiante, Materia, Calificacion, Tarea
 
 def index(request):
     return render(request, "index.html")
 
 def administrador(request):
-    # 1. CÁLCULO DE KPIs PARA EL ADMINISTRADOR (Exigencia de la rúbrica: mín 3)
-    total_estudiantes = Estudiante.objects.count()
-    promedio_general = Calificacion.objects.aggregate(Avg('nota'))['nota__avg'] or 0.0
-    tareas_pendientes = Tarea.objects.filter(completada=False).count()
+    # Procesamiento de formularios POST enviados por el Profesor
+    if request.method == 'POST':
+        # 1. Crear Sala
+        if 'crear_sala' in request.POST:
+            profesor = request.POST.get('nombre_profesor', '').strip()
+            asignatura = request.POST.get('asignatura', '').strip()
+            if profesor and asignatura:
+                nueva_sala = Sala.objects.create(nombre_profesor=profesor, asignatura=asignatura)
+                request.session['sala_activa_id'] = nueva_sala.id
+                return redirect('administrador')
 
-    # 2. DATOS PARA LOS 4 GRÁFICOS DEL ADMINISTRADOR (Exigencia de la rúbrica: mín 4)
+        # 2. Agregar Nuevo Estudiante a la Sala Activa
+        elif 'crear_estudiante' in request.POST:
+            sala_id = request.session.get('sala_activa_id')
+            sala_activa = Sala.objects.filter(id=sala_id).first()
+            if sala_activa:
+                nombre = request.POST.get('nombre', '').strip()
+                edad = request.POST.get('edad', 15)
+                tiempo_viaje = request.POST.get('tiempo_viaje', '< 15 min')
+                if nombre:
+                    Estudiante.objects.create(
+                        nombre=nombre,
+                        edad=int(edad),
+                        tiempo_viaje=tiempo_viaje,
+                        sala=sala_activa
+                    )
+            return redirect('administrador')
+
+        # 3. Registrar Calificación para un Estudiante
+        elif 'crear_nota' in request.POST:
+            estudiante_id = request.POST.get('estudiante_id')
+            materia_nombre = request.POST.get('materia_nombre', '').strip()
+            semestre = request.POST.get('semestre', 1)
+            nota = request.POST.get('nota', 7.0)
+
+            estudiante = Estudiante.objects.filter(id=estudiante_id).first()
+            if estudiante and materia_nombre:
+                materia, _ = Materia.objects.get_or_create(nombre=materia_nombre)
+                Calificacion.objects.create(
+                    estudiante=estudiante,
+                    materia=materia,
+                    semestre=int(semestre),
+                    nota=float(nota)
+                )
+            return redirect('administrador')
+
+        # 4. Asignar Tarea Pendiente
+        elif 'crear_tarea' in request.POST:
+            estudiante_id = request.POST.get('estudiante_id')
+            materia_nombre = request.POST.get('materia_nombre', '').strip()
+            titulo = request.POST.get('titulo', '').strip()
+            fecha_entrega = request.POST.get('fecha_entrega')
+
+            estudiante = Estudiante.objects.filter(id=estudiante_id).first()
+            if estudiante and materia_nombre and titulo and fecha_entrega:
+                materia, _ = Materia.objects.get_or_create(nombre=materia_nombre)
+                Tarea.objects.create(
+                    estudiante=estudiante,
+                    materia=materia,
+                    titulo=titulo,
+                    fecha_entrega=fecha_entrega,
+                    completada=False
+                )
+            return redirect('administrador')
+
+    # Obtener todas las salas disponibles
+    todas_las_salas = Sala.objects.all()
     
-    # Gráfico 1: Personas por Edad
-    edades_query = Estudiante.objects.values('edad').annotate(total=Count('id')).order_by('edad')
-    grafico_edades_labels = [str(item['edad']) + ' años' for item in edades_query]
-    grafico_edades_data = [item['total'] for item in edades_query]
+    # Determinar qué sala está seleccionada
+    sala_id = request.session.get('sala_activa_id')
+    sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else todas_las_salas.first()
 
-    # Gráfico 2: Tiempo de Viaje
-    viaje_query = Estudiante.objects.values('tiempo_viaje').annotate(total=Count('id'))
-    grafico_viaje_labels = [item['tiempo_viaje'] for item in viaje_query]
-    grafico_viaje_data = [item['total'] for item in viaje_query]
+    if not sala_activa:
+        return render(request, "administrador.html", {'sin_salas': True, 'todas_las_salas': []})
 
-    # Gráfico 3: Promedio por Semestre
-    semestres_query = Calificacion.objects.values('semestre').annotate(prom=Avg('nota')).order_by('semestre')
-    grafico_semestre_labels = [f"Semestre {item['semestre']}" for item in semestres_query]
-    grafico_semestre_data = [round(item['prom'], 1) for item in semestres_query]
+    request.session['sala_activa_id'] = sala_activa.id
 
-    # Gráfico 4: Promedio por Materia
-    materias_query = Calificacion.objects.values('materia__nombre').annotate(prom=Avg('nota'))
-    grafico_materia_labels = [item['materia__nombre'] for item in materias_query]
-    grafico_materia_data = [round(item['prom'], 1) for item in materias_query]
+    # FILTRAR ESTUDIANTES ÚNICAMENTE DE LA SALA ACTIVA
+    estudiantes_sala = Estudiante.objects.filter(sala=sala_activa)
+    todas_las_materias = Materia.objects.all()
 
-    # 3. LISTADO PARA LA TABLA HTML (Exigencia de la rúbrica)
-    lista_estudiantes = Estudiante.objects.all()
+    # 1. KPIs
+    total_estudiantes = estudiantes_sala.count()
+    promedio_general = Calificacion.objects.filter(estudiante__in=estudiantes_sala).aggregate(Avg('nota'))['nota__avg'] or 0.0
+    tareas_pendientes = Tarea.objects.filter(estudiante__in=estudiantes_sala, completada=False).count()
+
+    # 2. Gráficos
+    edades_query = estudiantes_sala.values('edad').annotate(total=Count('id')).order_by('edad')
+    g1_labels = [f"{item['edad']} años" for item in edades_query]
+    g1_data = [item['total'] for item in edades_query]
+
+    viaje_query = estudiantes_sala.values('tiempo_viaje').annotate(total=Count('id'))
+    g2_labels = [item['tiempo_viaje'] for item in viaje_query]
+    g2_data = [item['total'] for item in viaje_query]
+
+    semestres_query = Calificacion.objects.filter(estudiante__in=estudiantes_sala).values('semestre').annotate(prom=Avg('nota')).order_by('semestre')
+    g3_labels = [f"Semestre {item['semestre']}" for item in semestres_query]
+    g3_data = [round(item['prom'], 1) for item in semestres_query]
+
+    materias_query = Calificacion.objects.filter(estudiante__in=estudiantes_sala).values('materia__nombre').annotate(prom=Avg('nota'))
+    g4_labels = [item['materia__nombre'] for item in materias_query]
+    g4_data = [round(item['prom'], 1) for item in materias_query]
 
     context = {
+        'sin_salas': False,
+        'sala_activa': sala_activa,
+        'todas_las_salas': todas_las_salas,
+        'todas_las_materias': todas_las_materias,
         'kpi_total_estudiantes': total_estudiantes,
         'kpi_promedio_general': round(promedio_general, 1),
         'kpi_tareas_pendientes': tareas_pendientes,
-        'g1_labels': grafico_edades_labels,
-        'g1_data': grafico_edades_data,
-        'g2_labels': grafico_viaje_labels,
-        'g2_data': grafico_viaje_data,
-        'g3_labels': grafico_semestre_labels,
-        'g3_data': grafico_semestre_data,
-        'g4_labels': grafico_materia_labels,
-        'g4_data': grafico_materia_data,
-        'estudiantes': lista_estudiantes,
+        'g1_labels': g1_labels,
+        'g1_data': g1_data,
+        'g2_labels': g2_labels,
+        'g2_data': g2_data,
+        'g3_labels': g3_labels,
+        'g3_data': g3_data,
+        'g4_labels': g4_labels,
+        'g4_data': g4_data,
+        'estudiantes': estudiantes_sala,
     }
     return render(request, "administrador.html", context)
 
+def cambiar_sala(request, sala_id):
+    request.session['sala_activa_id'] = sala_id
+    return redirect('administrador')
+
 def usuario(request):
-    # 1. SI VIENE UN FORMULARIO CON EL NOMBRE (Proceso de Login)
     if request.method == 'POST':
         nombre_ingresado = request.POST.get('nombre_estudiante', '').strip()
-        # Buscamos al estudiante por nombre (sin importar mayúsculas/minúsculas)
-        estudiante_encontrado = Estudiante.objects.filter(nombre__iexact=nombre_ingresado).first()
-        
-        if estudiante_encontrado:
-            # Guardamos el ID en la memoria de la sesión
-            request.session['estudiante_id'] = estudiante_encontrado.id
-            return redirect('usuario')
-        else:
-            # Si no existe el estudiante, devolvemos un mensaje de error
-            todos = Estudiante.objects.all()
+        codigo_ingresado = request.POST.get('codigo_sala', '').strip().upper()
+
+        sala_encontrada = Sala.objects.filter(codigo=codigo_ingresado).first()
+
+        if not sala_encontrada:
             return render(request, "usuario.html", {
                 'mostrar_login': True,
-                'error_login': f"No se encontró ningún estudiante llamado '{nombre_ingresado}'.",
-                'lista_estudiantes': todos
+                'error_login': f"El código de sala '{codigo_ingresado}' no existe."
             })
 
-    # 2. VERIFICAR SI YA HAY UN ESTUDIANTE EN SESIÓN
-    estudiante_id = request.session.get('estudiante_id')
-    
-    # Si no hay sesión iniciada, mostramos la pantalla de Login
-    if not estudiante_id:
-        todos = Estudiante.objects.all()
-        return render(request, "usuario.html", {
-            'mostrar_login': True,
-            'lista_estudiantes': todos
-        })
+        estudiante = Estudiante.objects.filter(nombre__iexact=nombre_ingresado, sala=sala_encontrada).first()
 
-    # 3. SI HAY SESIÓN, CARGAMOS AL ESTUDIANTE Y SUS DATOS
+        if not estudiante:
+            estudiante_sin_sala = Estudiante.objects.filter(nombre__iexact=nombre_ingresado).first()
+            if estudiante_sin_sala:
+                estudiante = estudiante_sin_sala
+                estudiante.sala = sala_encontrada
+                estudiante.save()
+            else:
+                estudiante = Estudiante.objects.create(
+                    nombre=nombre_ingresado,
+                    edad=15,
+                    tiempo_viaje='< 15 min',
+                    sala=sala_encontrada
+                )
+
+        request.session['estudiante_id'] = estudiante.id
+        return redirect('usuario')
+
+    estudiante_id = request.session.get('estudiante_id')
+    if not estudiante_id:
+        return render(request, "usuario.html", {'mostrar_login': True})
+
     estudiante = Estudiante.objects.filter(id=estudiante_id).first()
-    
-    # Si por alguna razón el estudiante fue borrado de la BD
     if not estudiante:
         request.session.flush()
         return redirect('usuario')
 
-    # KPIs del Estudiante
     promedio_estudiante = Calificacion.objects.filter(estudiante=estudiante).aggregate(Avg('nota'))['nota__avg'] or 0.0
     materias_inscritas = Calificacion.objects.filter(estudiante=estudiante).values('materia').distinct().count()
     tareas_pendientes = Tarea.objects.filter(estudiante=estudiante, completada=False).count()
 
-    # Gráficos del Estudiante
     notas_materia = Calificacion.objects.filter(estudiante=estudiante).values('materia__nombre').annotate(prom=Avg('nota'))
     g1_labels = [item['materia__nombre'] for item in notas_materia]
     g1_data = [round(item['prom'], 1) for item in notas_materia]
@@ -105,7 +186,6 @@ def usuario(request):
     g2_labels = [f"Trimestre {item['semestre']}" for item in notas_semestre]
     g2_data = [round(item['prom'], 1) for item in notas_semestre]
 
-    # Lista de Tareas
     tareas_lista = Tarea.objects.filter(estudiante=estudiante, completada=False)[:5]
 
     context = {
@@ -123,6 +203,5 @@ def usuario(request):
     return render(request, "usuario.html", context)
 
 def logout_usuario(request):
-    # Limpia la memoria de sesión y vuelve a pedir el nombre
     request.session.flush()
     return redirect('usuario')
