@@ -7,7 +7,6 @@ class Sala(models.Model):
     codigo = models.CharField(max_length=10, unique=True, editable=False)
 
     def save(self, *args, **kwargs):
-        # Genera un código único en mayúsculas de 6 caracteres si no tiene uno
         if not self.codigo:
             self.codigo = uuid.uuid4().hex[:6].upper()
         super().save(*args, **kwargs)
@@ -26,8 +25,6 @@ class Estudiante(models.Model):
         ('> 1 hora', 'Más de 1 hora'),
     ]
     tiempo_viaje = models.CharField(max_length=50, choices=TIEMPO_VIAJE_CHOICES)
-    
-    # Enlace directo con la Sala del profesor
     sala = models.ForeignKey(Sala, on_delete=models.CASCADE, related_name="estudiantes", null=True, blank=True)
 
     def __str__(self):
@@ -43,7 +40,7 @@ class Materia(models.Model):
 class Calificacion(models.Model):
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
-    semestre = models.IntegerField(help_text="Ejemplo: 1, 2 o 3")
+    semestre = models.IntegerField(help_text="Ejemplo: 1 o 2")
     nota = models.FloatField()
 
     def __str__(self):

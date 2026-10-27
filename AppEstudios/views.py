@@ -6,7 +6,6 @@ def index(request):
     return render(request, "index.html")
 
 def administrador(request):
-    # Procesamiento de formularios POST enviados por el Profesor
     if request.method == 'POST':
         # 1. Crear Sala
         if 'crear_sala' in request.POST:
@@ -17,7 +16,7 @@ def administrador(request):
                 request.session['sala_activa_id'] = nueva_sala.id
                 return redirect('administrador')
 
-        # 2. Agregar Nuevo Estudiante a la Sala Activa
+        # 2. Agregar Estudiante
         elif 'crear_estudiante' in request.POST:
             sala_id = request.session.get('sala_activa_id')
             sala_activa = Sala.objects.filter(id=sala_id).first()
@@ -34,7 +33,7 @@ def administrador(request):
                     )
             return redirect('administrador')
 
-        # 3. Registrar Calificación para un Estudiante
+        # 3. Registrar Calificación
         elif 'crear_nota' in request.POST:
             estudiante_id = request.POST.get('estudiante_id')
             materia_nombre = request.POST.get('materia_nombre', '').strip()
@@ -52,7 +51,7 @@ def administrador(request):
                 )
             return redirect('administrador')
 
-        # 4. Asignar Tarea Pendiente
+        # 4. Asignar Tarea
         elif 'crear_tarea' in request.POST:
             estudiante_id = request.POST.get('estudiante_id')
             materia_nombre = request.POST.get('materia_nombre', '').strip()
@@ -71,10 +70,7 @@ def administrador(request):
                 )
             return redirect('administrador')
 
-    # Obtener todas las salas disponibles
     todas_las_salas = Sala.objects.all()
-    
-    # Determinar qué sala está seleccionada
     sala_id = request.session.get('sala_activa_id')
     sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else todas_las_salas.first()
 
@@ -83,16 +79,13 @@ def administrador(request):
 
     request.session['sala_activa_id'] = sala_activa.id
 
-    # FILTRAR ESTUDIANTES ÚNICAMENTE DE LA SALA ACTIVA
     estudiantes_sala = Estudiante.objects.filter(sala=sala_activa)
     todas_las_materias = Materia.objects.all()
 
-    # 1. KPIs
     total_estudiantes = estudiantes_sala.count()
     promedio_general = Calificacion.objects.filter(estudiante__in=estudiantes_sala).aggregate(Avg('nota'))['nota__avg'] or 0.0
     tareas_pendientes = Tarea.objects.filter(estudiante__in=estudiantes_sala, completada=False).count()
 
-    # 2. Gráficos
     edades_query = estudiantes_sala.values('edad').annotate(total=Count('id')).order_by('edad')
     g1_labels = [f"{item['edad']} años" for item in edades_query]
     g1_data = [item['total'] for item in edades_query]
@@ -183,7 +176,7 @@ def usuario(request):
     g1_data = [round(item['prom'], 1) for item in notas_materia]
 
     notas_semestre = Calificacion.objects.filter(estudiante=estudiante).values('semestre').annotate(prom=Avg('nota')).order_by('semestre')
-    g2_labels = [f"Trimestre {item['semestre']}" for item in notas_semestre]
+    g2_labels = [f"Semestre {item['semestre']}" for item in notas_semestre]
     g2_data = [round(item['prom'], 1) for item in notas_semestre]
 
     tareas_lista = Tarea.objects.filter(estudiante=estudiante, completada=False)[:5]
