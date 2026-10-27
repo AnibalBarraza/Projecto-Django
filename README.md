@@ -27,3 +27,6 @@ python manage.py runserver
 Open `http://127.0.0.1:8000/`. The administrator and user pages are at `/administrador/` and `/usuario/`; Django admin is at `/admin/`.
 
 For deployment, set `DJANGO_SECRET_KEY` to a new, private value and configure `DEBUG` and `ALLOWED_HOSTS` for the deployment environment. Do not use the local development fallback key in production.
+
+## CAMBIOS A REALIZAR
+
