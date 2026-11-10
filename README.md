@@ -30,6 +30,12 @@ For deployment, set `DJANGO_SECRET_KEY` to a new, private value and configure `D
 
 ## CAMBIOS A REALIZAR ##
 
--Pueden haber múltiples personas con el mismo nombre
+-Mejorar Dashboards
+-Incluir consejos de estudio
+-Gráficos con profundidad (clickear una parte y que haya más información)
+-Base de datos en AWS
+-Modelamiento consistente (Uso correcto de graficos)
+-Mantenedores (poder cambiar mail, etc)
+-Mejorar la creación de cuentas
 
--Profesor no tiene la capacidad de eliminar alumnos
+
