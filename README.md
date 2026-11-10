@@ -44,6 +44,10 @@ For deployment, set `DJANGO_SECRET_KEY` to a new, private value and configure `D
 
 -Mejorar la creación de cuentas
 
+-Calendario
+
 **PROCESOS DEBEN SER SIMPLES DE UTILIZAR**
+
+*CHATGPT AYUDAME*
 
 
