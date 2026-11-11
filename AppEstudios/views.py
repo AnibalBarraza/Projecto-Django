@@ -4,6 +4,40 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Avg, Count
 from .models import Sala, Estudiante, Materia, Calificacion, Tarea
 
+
+def clave_periodo_vista(sala_id):
+    return f'periodo_vista_sala_{sala_id}'
+
+
+def obtener_periodo_vista(request, sala):
+    periodo = request.session.get(
+        clave_periodo_vista(sala.id),
+        f'{sala.semestre_actual}-{sala.anio_actual}',
+    )
+    try:
+        semestre, anio = (int(valor) for valor in periodo.split('-', maxsplit=1))
+    except (AttributeError, ValueError):
+        semestre, anio = sala.semestre_actual, sala.anio_actual
+
+    periodo = (semestre, anio)
+    periodo_inicio = ordenar_periodo(sala.semestre_inicio, sala.anio_inicio)
+    periodo_actual = ordenar_periodo(sala.semestre_actual, sala.anio_actual)
+    periodo_ordenado = ordenar_periodo(semestre, anio)
+    if not periodo_inicio <= periodo_ordenado <= periodo_actual:
+        return periodo_actual
+    return periodo
+
+
+def periodo_anterior(semestre, anio):
+    if semestre == 1:
+        return 2, anio - 1
+    return 1, anio
+
+
+def ordenar_periodo(semestre, anio):
+    return anio, semestre
+
+
 def index(request):
     return render(request, "index.html")
 
@@ -18,22 +52,69 @@ def administrador(request):
                 request.session['sala_activa_id'] = nueva_sala.id
                 return redirect('administrador')
 
+        elif 'terminar_semestre' in request.POST:
+            sala_id = request.session.get('sala_activa_id')
+            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else Sala.objects.first()
+            confirmacion = request.POST.get('confirmacion', '').strip().casefold()
+            if confirmacion != 'si':
+                messages.error(request, 'Escribe SI para confirmar el cierre del semestre.')
+            elif sala_activa:
+                if sala_activa.semestre_actual == 1:
+                    sala_activa.semestre_actual = 2
+                else:
+                    sala_activa.semestre_actual = 1
+                    sala_activa.anio_actual += 1
+                sala_activa.save(update_fields=['semestre_actual', 'anio_actual'])
+                request.session.pop(clave_periodo_vista(sala_activa.id), None)
+                messages.success(
+                    request,
+                    f'Semestre terminado. La sala ahora está en Semestre '
+                    f'{sala_activa.semestre_actual} {sala_activa.anio_actual}.',
+                )
+            return redirect('administrador')
+
+        elif 'ver_semestre_anterior' in request.POST:
+            sala_id = request.session.get('sala_activa_id')
+            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else Sala.objects.first()
+            if sala_activa:
+                semestre, anio = obtener_periodo_vista(request, sala_activa)
+                periodo_inicio = ordenar_periodo(
+                    sala_activa.semestre_inicio,
+                    sala_activa.anio_inicio,
+                )
+                periodo_anterior_seleccionado = periodo_anterior(semestre, anio)
+                if ordenar_periodo(*periodo_anterior_seleccionado) >= periodo_inicio:
+                    request.session[clave_periodo_vista(sala_activa.id)] = (
+                        f'{periodo_anterior_seleccionado[0]}-{periodo_anterior_seleccionado[1]}'
+                    )
+            return redirect('administrador')
+
+        elif 'volver_semestre_actual' in request.POST:
+            sala_id = request.session.get('sala_activa_id')
+            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else Sala.objects.first()
+            if sala_activa:
+                request.session.pop(clave_periodo_vista(sala_activa.id), None)
+            return redirect('administrador')
+
         # 2. Registrar Calificación
         elif 'crear_nota' in request.POST:
             estudiante_id = request.POST.get('estudiante_id')
             materia_nombre = request.POST.get('materia_nombre', '').strip()
-            semestre = request.POST.get('semestre', 1)
             nota = request.POST.get('nota', 7.0)
-
-            estudiante = Estudiante.objects.filter(id=estudiante_id).first()
-            if estudiante and materia_nombre:
-                materia, _ = Materia.objects.get_or_create(nombre=materia_nombre)
-                Calificacion.objects.create(
-                    estudiante=estudiante,
-                    materia=materia,
-                    semestre=int(semestre),
-                    nota=float(nota)
-                )
+            todas_las_salas = Sala.objects.all()
+            sala_id = request.session.get('sala_activa_id')
+            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else todas_las_salas.first()
+            if sala_activa:
+                estudiante = Estudiante.objects.filter(id=estudiante_id, sala=sala_activa).first()
+                if estudiante and materia_nombre:
+                    materia, _ = Materia.objects.get_or_create(nombre=materia_nombre)
+                    Calificacion.objects.create(
+                        estudiante=estudiante,
+                        materia=materia,
+                        semestre=sala_activa.semestre_actual,
+                        anio=sala_activa.anio_actual,
+                        nota=float(nota)
+                    )
             return redirect('administrador')
 
         # 3. Asignar Tarea
@@ -76,9 +157,24 @@ def administrador(request):
 
     estudiantes_sala = Estudiante.objects.filter(sala=sala_activa)
     todas_las_materias = Materia.objects.all()
+    semestre_actual = sala_activa.semestre_actual
+    anio_actual = sala_activa.anio_actual
+    semestre_vista, anio_vista = obtener_periodo_vista(request, sala_activa)
+    periodo_label = f'Semestre {semestre_vista} {anio_vista}'
+    periodo_actual_label = f'Semestre {semestre_actual} {anio_actual}'
+    es_periodo_inicial = ordenar_periodo(semestre_vista, anio_vista) == ordenar_periodo(
+        sala_activa.semestre_inicio,
+        sala_activa.anio_inicio,
+    )
+    viendo_historial = (semestre_vista, anio_vista) != (semestre_actual, anio_actual)
 
     total_estudiantes = estudiantes_sala.count()
-    promedio_general = Calificacion.objects.filter(estudiante__in=estudiantes_sala).aggregate(Avg('nota'))['nota__avg'] or 0.0
+    calificaciones_periodo = Calificacion.objects.filter(
+        estudiante__in=estudiantes_sala,
+        semestre=semestre_vista,
+        anio=anio_vista,
+    )
+    promedio_periodo = calificaciones_periodo.aggregate(Avg('nota'))['nota__avg'] or 0.0
     tareas_pendientes = Tarea.objects.filter(estudiante__in=estudiantes_sala, completada=False).count()
 
     edades_query = estudiantes_sala.values('edad').annotate(total=Count('id')).order_by('edad')
@@ -89,11 +185,10 @@ def administrador(request):
     g2_labels = [item['tiempo_viaje'] for item in viaje_query]
     g2_data = [item['total'] for item in viaje_query]
 
-    semestres_query = Calificacion.objects.filter(estudiante__in=estudiantes_sala).values('semestre').annotate(prom=Avg('nota')).order_by('semestre')
-    g3_labels = [f"Semestre {item['semestre']}" for item in semestres_query]
-    g3_data = [round(item['prom'], 1) for item in semestres_query]
+    g3_labels = [periodo_label]
+    g3_data = [round(promedio_periodo, 1)]
 
-    materias_query = Calificacion.objects.filter(estudiante__in=estudiantes_sala).values('materia__nombre').annotate(prom=Avg('nota'))
+    materias_query = calificaciones_periodo.values('materia__nombre').annotate(prom=Avg('nota'))
     g4_labels = [item['materia__nombre'] for item in materias_query]
     g4_data = [round(item['prom'], 1) for item in materias_query]
 
@@ -102,8 +197,12 @@ def administrador(request):
         'sala_activa': sala_activa,
         'todas_las_salas': todas_las_salas,
         'todas_las_materias': todas_las_materias,
+        'periodo_label': periodo_label,
+        'periodo_actual_label': periodo_actual_label,
+        'es_periodo_inicial': es_periodo_inicial,
+        'viendo_historial': viendo_historial,
         'kpi_total_estudiantes': total_estudiantes,
-        'kpi_promedio_general': round(promedio_general, 1),
+        'kpi_promedio_general': round(promedio_periodo, 1),
         'kpi_tareas_pendientes': tareas_pendientes,
         'g1_labels': g1_labels,
         'g1_data': g1_data,

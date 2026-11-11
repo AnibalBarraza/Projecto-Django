@@ -3,7 +3,15 @@ from .models import Sala, Estudiante, Materia, Calificacion, Tarea
 
 @admin.register(Sala)
 class SalaAdmin(admin.ModelAdmin):
-    list_display = ('codigo', 'asignatura', 'nombre_profesor')
+    list_display = (
+        'codigo',
+        'asignatura',
+        'nombre_profesor',
+        'semestre_inicio',
+        'anio_inicio',
+        'semestre_actual',
+        'anio_actual',
+    )
     search_fields = ('codigo', 'nombre_profesor', 'asignatura')
 
 @admin.register(Estudiante)
@@ -18,8 +26,8 @@ class MateriaAdmin(admin.ModelAdmin):
 
 @admin.register(Calificacion)
 class CalificacionAdmin(admin.ModelAdmin):
-    list_display = ('estudiante', 'materia', 'semestre', 'nota')
-    list_filter = ('materia', 'semestre')
+    list_display = ('estudiante', 'materia', 'semestre', 'anio', 'nota')
+    list_filter = ('materia', 'anio', 'semestre')
 
 @admin.register(Tarea)
 class TareaAdmin(admin.ModelAdmin):

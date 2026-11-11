@@ -38,7 +38,7 @@
         <div class="col-md-10 p-4">
             {% if messages %}
                 {% for message in messages %}
-                <div class="alert alert-warning" role="alert">{{ message }}</div>
+                <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-warning{% endif %}" role="alert">{{ message }}</div>
                 {% endfor %}
             {% endif %}
 
@@ -103,6 +103,23 @@
 
             <!-- BARRA DE ACCIONES PARA EL PROFESOR -->
             <div class="d-flex flex-wrap gap-2 mb-4">
+                <form method="POST" action="{% url 'administrador' %}">
+                    {% csrf_token %}
+                    <button type="submit" name="ver_semestre_anterior" value="1" class="btn btn-outline-secondary fw-bold" {% if es_periodo_inicial %}disabled aria-disabled="true"{% endif %}>
+                        ← Semestre anterior
+                    </button>
+                </form>
+                {% if viendo_historial %}
+                <form method="POST" action="{% url 'administrador' %}">
+                    {% csrf_token %}
+                    <button type="submit" name="volver_semestre_actual" value="1" class="btn btn-outline-primary fw-bold">
+                        Volver al semestre actual · {{ periodo_actual_label }}
+                    </button>
+                </form>
+                {% endif %}
+                <button type="button" class="btn btn-danger fw-bold" data-bs-toggle="modal" data-bs-target="#modalTerminarSemestre">
+                    Terminar semestre · {{ periodo_actual_label }}
+                </button>
                 <button class="btn btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevaNota">
                     📝 + Registrar Nota
                 </button>
@@ -158,7 +175,7 @@
                 </div>
                 <div class="col-md-6 mb-4">
                     <div class="card chart-card p-3 bg-white h-100">
-                        <h6 class="fw-bold text-muted text-center mb-3">Promedio por Semestre</h6>
+                        <h6 class="fw-bold text-muted text-center mb-3">Promedio de {{ periodo_label }}</h6>
                         <canvas id="chartSemestre"></canvas>
                     </div>
                 </div>
@@ -233,6 +250,32 @@
     </div>
 </div>
 
+<!-- MODAL: TERMINAR SEMESTRE -->
+<div class="modal fade" id="modalTerminarSemestre" tabindex="-1" aria-labelledby="modalTerminarSemestreLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="modalTerminarSemestreLabel">Advertencia: terminar semestre</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="{% url 'administrador' %}">
+                {% csrf_token %}
+                <input type="hidden" name="terminar_semestre" value="1">
+                <div class="modal-body">
+                    <p>Vas a cerrar <strong>{{ periodo_actual_label }}</strong> para la sala <strong>{{ sala_activa.asignatura }}</strong>. Esta acción avanzará al siguiente semestre.</p>
+                    <p class="fw-bold text-danger">Para confirmar, escribe SI en el campo siguiente.</p>
+                    <label for="confirmarTerminoSemestre" class="form-label">Confirmación</label>
+                    <input id="confirmarTerminoSemestre" type="text" name="confirmacion" class="form-control" autocomplete="off" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger fw-bold">Confirmar y avanzar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL: REGISTRAR NOTA -->
 <div class="modal fade" id="modalNuevaNota" tabindex="-1">
     <div class="modal-dialog">
@@ -265,14 +308,8 @@
                         </datalist>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold small text-muted">Semestre</label>
-                            <select name="semestre" class="form-select">
-                                <option value="1">Semestre 1</option>
-                                <option value="2">Semestre 2</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-12 mb-3">
+                            <span class="form-text d-block mb-2">Periodo actual: <strong>{{ periodo_actual_label }}</strong></span>
                             <label class="form-label fw-bold small text-muted">Nota (1.0 a 7.0)</label>
                             <input type="number" step="0.1" name="nota" class="form-control" min="1.0" max="7.0" value="6.0" required>
                         </div>

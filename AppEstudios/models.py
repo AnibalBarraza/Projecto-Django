@@ -1,10 +1,23 @@
 import uuid
 from django.db import models
+from django.utils import timezone
+
+
+def semestre_actual_por_fecha():
+    return 1 if timezone.localdate().month <= 6 else 2
+
+
+def anio_actual_por_fecha():
+    return timezone.localdate().year
 
 class Sala(models.Model):
     nombre_profesor = models.CharField(max_length=100)
     asignatura = models.CharField(max_length=100)
     codigo = models.CharField(max_length=10, unique=True, editable=False)
+    semestre_actual = models.PositiveSmallIntegerField(default=semestre_actual_por_fecha)
+    anio_actual = models.PositiveSmallIntegerField(default=anio_actual_por_fecha)
+    semestre_inicio = models.PositiveSmallIntegerField(default=semestre_actual_por_fecha)
+    anio_inicio = models.PositiveSmallIntegerField(default=anio_actual_por_fecha)
 
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -42,6 +55,7 @@ class Calificacion(models.Model):
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
     semestre = models.IntegerField(help_text="Ejemplo: 1 o 2")
+    anio = models.IntegerField(default=2025)
     nota = models.FloatField()
 
     def __str__(self):

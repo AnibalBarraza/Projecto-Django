@@ -1,7 +1,10 @@
+from datetime import date
+from unittest.mock import patch
+
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Estudiante, Materia, Sala, Tarea
+from .models import Calificacion, Estudiante, Materia, Sala, Tarea
 
 
 class StudentCalendarTests(TestCase):
@@ -106,6 +109,237 @@ class StudentCalendarTests(TestCase):
 
 
 class RoomTaskAssignmentTests(TestCase):
+    @patch('AppEstudios.models.timezone.localdate', return_value=date(2026, 3, 10))
+    def test_new_room_starts_in_semester_of_creation_date(self, _mock_localdate):
+        sala = Sala.objects.create(
+            nombre_profesor='Profesora Ejemplo',
+            asignatura='Matemáticas',
+        )
+
+        self.assertEqual((sala.semestre_actual, sala.anio_actual), (1, 2026))
+
+    def test_ending_semester_requires_si_and_advances_only_active_room(self):
+        sala_activa = Sala.objects.create(
+            nombre_profesor='Profesora Ejemplo',
+            asignatura='Matemáticas',
+            semestre_actual=1,
+            anio_actual=2025,
+            semestre_inicio=1,
+            anio_inicio=2025,
+        )
+        otra_sala = Sala.objects.create(
+            nombre_profesor='Profesor Otro',
+            asignatura='Historia',
+            semestre_actual=2,
+            anio_actual=2025,
+            semestre_inicio=2,
+            anio_inicio=2025,
+        )
+        session = self.client.session
+        session['sala_activa_id'] = sala_activa.id
+        session.save()
+
+        response = self.client.post(
+            reverse('administrador'),
+            {'terminar_semestre': '1', 'confirmacion': 'no'},
+            follow=True,
+        )
+        self.assertContains(response, 'Escribe SI para confirmar el cierre del semestre.')
+        sala_activa.refresh_from_db()
+        self.assertEqual((sala_activa.semestre_actual, sala_activa.anio_actual), (1, 2025))
+
+        for expected_period in ((2, 2025), (1, 2026)):
+            response = self.client.post(
+                reverse('administrador'),
+                {'terminar_semestre': '1', 'confirmacion': 'si'},
+                follow=True,
+            )
+            self.assertRedirects(response, reverse('administrador'))
+            sala_activa.refresh_from_db()
+            self.assertEqual(
+                (sala_activa.semestre_actual, sala_activa.anio_actual),
+                expected_period,
+            )
+
+        otra_sala.refresh_from_db()
+        self.assertEqual((otra_sala.semestre_actual, otra_sala.anio_actual), (2, 2025))
+        self.assertContains(response, 'Terminar semestre · Semestre 1 2026')
+
+    def test_ending_second_semester_advances_to_first_semester_next_year(self):
+        sala = Sala.objects.create(
+            nombre_profesor='Profesora Ejemplo',
+            asignatura='Matemáticas',
+            semestre_actual=2,
+            anio_actual=2026,
+            semestre_inicio=2,
+            anio_inicio=2026,
+        )
+        session = self.client.session
+        session['sala_activa_id'] = sala.id
+        session.save()
+
+        self.client.post(
+            reverse('administrador'),
+            {'terminar_semestre': '1', 'confirmacion': 'SI'},
+        )
+
+        sala.refresh_from_db()
+        self.assertEqual((sala.semestre_actual, sala.anio_actual), (1, 2027))
+
+    def test_dashboard_can_browse_history_only_back_to_room_start(self):
+        sala = Sala.objects.create(
+            nombre_profesor='Profesora Ejemplo',
+            asignatura='Matemáticas',
+            semestre_inicio=1,
+            anio_inicio=2025,
+            semestre_actual=1,
+            anio_actual=2026,
+        )
+        estudiante = Estudiante.objects.create(
+            nombre='Ana',
+            apellido='Pérez',
+            edad=15,
+            tiempo_viaje='< 15 min',
+            sala=sala,
+        )
+        materia = Materia.objects.create(nombre='Álgebra')
+        Calificacion.objects.create(
+            estudiante=estudiante,
+            materia=materia,
+            semestre=1,
+            anio=2025,
+            nota=4.0,
+        )
+        Calificacion.objects.create(
+            estudiante=estudiante,
+            materia=materia,
+            semestre=2,
+            anio=2025,
+            nota=6.0,
+        )
+        Calificacion.objects.create(
+            estudiante=estudiante,
+            materia=materia,
+            semestre=1,
+            anio=2026,
+            nota=7.0,
+        )
+        session = self.client.session
+        session['sala_activa_id'] = sala.id
+        session.save()
+
+        response = self.client.get(reverse('administrador'))
+        self.assertEqual(response.context['periodo_label'], 'Semestre 1 2026')
+        self.assertContains(response, 'name="ver_semestre_anterior"')
+        self.assertNotContains(response, 'name="volver_semestre_actual"')
+
+        for expected_period, expected_average in (
+            ('Semestre 2 2025', 6.0),
+            ('Semestre 1 2025', 4.0),
+        ):
+            response = self.client.post(
+                reverse('administrador'),
+                {'ver_semestre_anterior': '1'},
+                follow=True,
+            )
+            self.assertEqual(response.context['periodo_label'], expected_period)
+            self.assertEqual(response.context['kpi_promedio_general'], expected_average)
+            self.assertContains(response, 'name="volver_semestre_actual"')
+
+        self.assertContains(response, 'name="ver_semestre_anterior" value="1" class="btn btn-outline-secondary fw-bold" disabled')
+        self.client.post(
+            reverse('administrador'),
+            {'ver_semestre_anterior': '1'},
+            follow=True,
+        )
+        response = self.client.get(reverse('administrador'))
+        self.assertEqual(response.context['periodo_label'], 'Semestre 1 2025')
+
+        response = self.client.post(
+            reverse('administrador'),
+            {'volver_semestre_actual': '1'},
+            follow=True,
+        )
+        self.assertEqual(response.context['periodo_label'], 'Semestre 1 2026')
+        self.assertEqual(response.context['kpi_promedio_general'], 7.0)
+
+    def test_dashboard_filters_grades_to_active_room_semester_and_year(self):
+        sala = Sala.objects.create(
+            nombre_profesor='Profesora Ejemplo',
+            asignatura='Matemáticas',
+            semestre_actual=1,
+            anio_actual=2025,
+            semestre_inicio=1,
+            anio_inicio=2025,
+        )
+        estudiante = Estudiante.objects.create(
+            nombre='Ana',
+            apellido='Pérez',
+            edad=15,
+            tiempo_viaje='< 15 min',
+            sala=sala,
+        )
+        materia = Materia.objects.create(nombre='Álgebra')
+        Calificacion.objects.create(
+            estudiante=estudiante,
+            materia=materia,
+            semestre=1,
+            anio=2025,
+            nota=4.0,
+        )
+        Calificacion.objects.create(
+            estudiante=estudiante,
+            materia=materia,
+            semestre=2,
+            anio=2025,
+            nota=7.0,
+        )
+        session = self.client.session
+        session['sala_activa_id'] = sala.id
+        session.save()
+
+        response = self.client.get(reverse('administrador'))
+
+        self.assertContains(response, 'Terminar semestre · Semestre 1 2025')
+        self.assertEqual(response.context['kpi_promedio_general'], 4.0)
+        self.assertEqual(response.context['g4_labels'], ['Álgebra'])
+        self.assertEqual(response.context['g3_labels'], ['Semestre 1 2025'])
+        self.assertEqual(response.context['g3_data'], [4.0])
+
+    def test_new_grade_uses_active_room_academic_period(self):
+        sala = Sala.objects.create(
+            nombre_profesor='Profesora Ejemplo',
+            asignatura='Matemáticas',
+            semestre_actual=2,
+            anio_actual=2025,
+            semestre_inicio=1,
+            anio_inicio=2025,
+        )
+        estudiante = Estudiante.objects.create(
+            nombre='Ana',
+            apellido='Pérez',
+            edad=15,
+            tiempo_viaje='< 15 min',
+            sala=sala,
+        )
+        session = self.client.session
+        session['sala_activa_id'] = sala.id
+        session.save()
+
+        response = self.client.post(
+            reverse('administrador'),
+            {
+                'crear_nota': '1',
+                'estudiante_id': estudiante.id,
+                'materia_nombre': 'Álgebra',
+                'nota': '6.5',
+            },
+        )
+
+        self.assertRedirects(response, reverse('administrador'))
+        calificacion = Calificacion.objects.get(estudiante=estudiante)
+        self.assertEqual((calificacion.semestre, calificacion.anio), (2, 2025))
+
     def test_admin_dashboard_has_no_student_creation_option(self):
         sala = Sala.objects.create(
             nombre_profesor='Profesora Ejemplo',
