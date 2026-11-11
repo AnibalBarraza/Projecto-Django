@@ -29,7 +29,25 @@ Open `http://127.0.0.1:8000/`. The administrator and user pages are at `/adminis
 For deployment, set `DJANGO_SECRET_KEY` to a new, private value and configure `DEBUG` and `ALLOWED_HOSTS` for the deployment environment. Do not use the local development fallback key in production.
 
 ## CAMBIOS A REALIZAR ##
+ 
+-Mejorar Dashboards
 
--Pueden haber múltiples personas con el mismo nombre
+-Incluir consejos de estudio
 
--Profesor no tiene la capacidad de eliminar alumnos
+-Gráficos con profundidad (clickear una parte y que haya más información)
+
+-Base de datos en AWS
+
+-Modelamiento consistente (Uso correcto de graficos)
+
+-Mantenedores (poder cambiar mail, etc)
+
+-Mejorar la creación de cuentas
+
+-Calendario
+
+**PROCESOS DEBEN SER SIMPLES DE UTILIZAR**
+
+*CHATGPT AYUDAME*
+
+
