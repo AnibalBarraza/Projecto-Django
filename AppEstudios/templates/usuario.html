@@ -10,6 +10,17 @@
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .sidebar { min-height: 100vh; background-color: #ffffff; border-right: 1px solid #e9ecef; }
         .kpi-card, .chart-card, .login-card { border: none; border-radius: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+        .calendar-weekday { text-align: center; color: #6c757d; font-size: .8rem; font-weight: 700; padding: 8px 0; }
+        .calendar-day { min-height: 112px; padding: 8px; border: 1px solid #e9ecef; border-radius: 10px; background: #fff; }
+        .calendar-day-number { font-weight: 700; }
+        .calendar-task { display: block; margin-top: 5px; padding: 4px 6px; border-radius: 6px; background: #fff3cd; color: #664d03; font-size: .75rem; overflow-wrap: anywhere; }
+        .calendar-task.completed { background: #d1e7dd; color: #0f5132; }
+        @media (max-width: 575.98px) {
+            .calendar-grid { gap: 3px; }
+            .calendar-day { min-height: 84px; padding: 4px; }
+            .calendar-task { font-size: .65rem; padding: 3px; }
+        }
     </style>
 </head>
 <body>
@@ -73,7 +84,7 @@
             </div>
 
             {% else %}
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
                 <div>
                     <h3 class="fw-bold m-0">Mi Dashboard</h3>
                     <span class="text-muted small">
@@ -81,10 +92,26 @@
                         Sala: <strong>{{ estudiante.sala.asignatura }}</strong> (Código: <code>{{ estudiante.sala.codigo }}</code>)
                     </span>
                 </div>
-                <a href="{% url 'logout_usuario' %}" class="btn btn-outline-secondary btn-sm">
-                    🚪 Cambiar de Sala / Usuario
-                </a>
+                <div class="d-flex gap-2">
+                    <button id="calendarToggle" class="btn btn-primary" type="button" aria-expanded="true" aria-controls="calendarPanel">
+                        Calendario
+                    </button>
+                    <a href="{% url 'logout_usuario' %}" class="btn btn-outline-secondary btn-sm align-content-center">
+                        🚪 Cambiar de Sala / Usuario
+                    </a>
+                </div>
             </div>
+
+            <section id="calendarPanel" class="card chart-card p-3 p-md-4 bg-white mb-4" aria-label="Calendario de entregas">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <button id="calendarPrevious" class="btn btn-outline-primary btn-sm" type="button" aria-label="Mes anterior">&larr;</button>
+                    <h5 id="calendarMonth" class="fw-bold mb-0 text-capitalize" aria-live="polite"></h5>
+                    <button id="calendarNext" class="btn btn-outline-primary btn-sm" type="button" aria-label="Mes siguiente">&rarr;</button>
+                </div>
+                <div class="calendar-grid" id="calendarWeekdays" aria-hidden="true"></div>
+                <div class="calendar-grid" id="calendarDays"></div>
+                <p class="text-muted small mt-3 mb-0">Las tareas asignadas por tu profesor aparecen en la fecha de entrega.</p>
+            </section>
 
             <!-- 1. KPIs -->
             <div class="row mb-4">
@@ -127,26 +154,6 @@
                 </div>
             </div>
 
-            <!-- 3. TAREAS -->
-            <div class="card chart-card p-4 bg-white">
-                <h5 class="fw-bold mb-3">Próximas Tareas Pendientes</h5>
-                <ul class="list-group list-group-flush">
-                    {% for tarea in tareas %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
-                        <div>
-                            <h6 class="mb-0 fw-bold">{{ tarea.titulo }}</h6>
-                            <small class="text-muted">{{ tarea.materia.nombre }}</small>
-                        </div>
-                        <span class="badge bg-warning-subtle text-warning-emphasis border">Entrega: {{ tarea.fecha_entrega }}</span>
-                    </li>
-                    {% empty %}
-                    <li class="list-group-item text-muted text-center py-3">
-                        🎉 ¡No tienes tareas pendientes asignadas!
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-
             {% endif %}
 
         </div>
@@ -158,6 +165,7 @@
 {{ g1_data|json_script:"g1_data_data" }}
 {{ g2_labels|json_script:"g2_labels_data" }}
 {{ g2_data|json_script:"g2_data_data" }}
+{{ tareas_calendario|json_script:"tareas_calendario_data" }}
 
 <script>
     const g1Labels = JSON.parse(document.getElementById('g1_labels_data').textContent);
@@ -165,6 +173,79 @@
 
     const g2Labels = JSON.parse(document.getElementById('g2_labels_data').textContent);
     const g2Data = JSON.parse(document.getElementById('g2_data_data').textContent);
+
+    const calendarPanel = document.getElementById('calendarPanel');
+    const calendarToggle = document.getElementById('calendarToggle');
+    const calendarMonth = document.getElementById('calendarMonth');
+    const calendarDays = document.getElementById('calendarDays');
+    const calendarTasks = JSON.parse(document.getElementById('tareas_calendario_data').textContent);
+    const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const weekdaysContainer = document.getElementById('calendarWeekdays');
+    let displayedMonth = new Date();
+    displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
+
+    weekdays.forEach((weekday) => {
+        const label = document.createElement('span');
+        label.className = 'calendar-weekday';
+        label.textContent = weekday;
+        weekdaysContainer.appendChild(label);
+    });
+
+    function renderCalendar() {
+        const year = displayedMonth.getFullYear();
+        const month = displayedMonth.getMonth();
+        const monthName = displayedMonth.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstWeekday = (new Date(year, month, 1).getDay() + 6) % 7;
+
+        calendarMonth.textContent = monthName;
+        calendarDays.replaceChildren();
+
+        for (let blank = 0; blank < firstWeekday; blank += 1) {
+            const emptyDay = document.createElement('div');
+            emptyDay.setAttribute('aria-hidden', 'true');
+            calendarDays.appendChild(emptyDay);
+        }
+
+        for (let day = 1; day <= daysInMonth; day += 1) {
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayCell = document.createElement('div');
+            dayCell.className = 'calendar-day';
+
+            const dayNumber = document.createElement('span');
+            dayNumber.className = 'calendar-day-number';
+            dayNumber.textContent = day;
+            dayCell.appendChild(dayNumber);
+
+            calendarTasks.filter((task) => task.fecha_entrega === dateKey).forEach((task) => {
+                const taskLabel = document.createElement('span');
+                taskLabel.className = `calendar-task${task.completada ? ' completed' : ''}`;
+                taskLabel.textContent = `${task.titulo} · ${task.materia__nombre}`;
+                dayCell.appendChild(taskLabel);
+            });
+
+            calendarDays.appendChild(dayCell);
+        }
+    }
+
+    calendarToggle.addEventListener('click', () => {
+        const isHidden = calendarPanel.classList.contains('d-none');
+        calendarPanel.classList.toggle('d-none', !isHidden);
+        calendarToggle.setAttribute('aria-expanded', String(isHidden));
+        if (isHidden) renderCalendar();
+    });
+
+    document.getElementById('calendarPrevious').addEventListener('click', () => {
+        displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() - 1, 1);
+        renderCalendar();
+    });
+
+    document.getElementById('calendarNext').addEventListener('click', () => {
+        displayedMonth = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth() + 1, 1);
+        renderCalendar();
+    });
+
+    renderCalendar();
 
     new Chart(document.getElementById('chartMisNotas'), {
         type: 'bar',

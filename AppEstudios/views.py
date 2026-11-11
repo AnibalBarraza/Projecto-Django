@@ -1,3 +1,5 @@
+from datetime import datetime
+from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Avg, Count
 from .models import Sala, Estudiante, Materia, Calificacion, Tarea
@@ -16,26 +18,7 @@ def administrador(request):
                 request.session['sala_activa_id'] = nueva_sala.id
                 return redirect('administrador')
 
-        # 2. Agregar Estudiante
-        elif 'crear_estudiante' in request.POST:
-            sala_id = request.session.get('sala_activa_id')
-            sala_activa = Sala.objects.filter(id=sala_id).first()
-            if sala_activa:
-                nombre = request.POST.get('nombre', '').strip()
-                apellido = request.POST.get('apellido', '').strip()
-                edad = request.POST.get('edad', 15)
-                tiempo_viaje = request.POST.get('tiempo_viaje', '< 15 min')
-                if nombre:
-                    Estudiante.objects.create(
-                        nombre=nombre,
-                        apellido=apellido,
-                        edad=int(edad),
-                        tiempo_viaje=tiempo_viaje,
-                        sala=sala_activa
-                    )
-            return redirect('administrador')
-
-        # 3. Registrar Calificación
+        # 2. Registrar Calificación
         elif 'crear_nota' in request.POST:
             estudiante_id = request.POST.get('estudiante_id')
             materia_nombre = request.POST.get('materia_nombre', '').strip()
@@ -53,23 +36,33 @@ def administrador(request):
                 )
             return redirect('administrador')
 
-        # 4. Asignar Tarea
+        # 3. Asignar Tarea
         elif 'crear_tarea' in request.POST:
-            estudiante_id = request.POST.get('estudiante_id')
-            materia_nombre = request.POST.get('materia_nombre', '').strip()
             titulo = request.POST.get('titulo', '').strip()
-            fecha_entrega = request.POST.get('fecha_entrega')
+            fecha_entrega_texto = request.POST.get('fecha_entrega', '').strip()
+            try:
+                fecha_entrega = datetime.strptime(fecha_entrega_texto, '%d/%m/%Y').date()
+            except ValueError:
+                messages.error(request, 'Ingresa una fecha válida en formato DD/MM/AAAA.')
+                return redirect('administrador')
 
-            estudiante = Estudiante.objects.filter(id=estudiante_id).first()
-            if estudiante and materia_nombre and titulo and fecha_entrega:
-                materia, _ = Materia.objects.get_or_create(nombre=materia_nombre)
-                Tarea.objects.create(
-                    estudiante=estudiante,
-                    materia=materia,
-                    titulo=titulo,
-                    fecha_entrega=fecha_entrega,
-                    completada=False
-                )
+            todas_las_salas = Sala.objects.all()
+            sala_id = request.session.get('sala_activa_id')
+            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else todas_las_salas.first()
+            if sala_activa and titulo and fecha_entrega:
+                estudiantes_sala = Estudiante.objects.filter(sala=sala_activa)
+                if estudiantes_sala.exists():
+                    materia, _ = Materia.objects.get_or_create(nombre=sala_activa.asignatura)
+                    Tarea.objects.bulk_create([
+                        Tarea(
+                            estudiante=estudiante,
+                            materia=materia,
+                            titulo=titulo,
+                            fecha_entrega=fecha_entrega,
+                            completada=False,
+                        )
+                        for estudiante in estudiantes_sala
+                    ])
             return redirect('administrador')
 
     todas_las_salas = Sala.objects.all()
@@ -131,7 +124,14 @@ def cambiar_sala(request, sala_id):
 def usuario(request):
     if request.method == 'POST':
         nombre_ingresado = request.POST.get('nombre_estudiante', '').strip()
+        apellido_ingresado = request.POST.get('apellido_estudiante', '').strip()
         codigo_ingresado = request.POST.get('codigo_sala', '').strip().upper()
+
+        if not nombre_ingresado or not apellido_ingresado:
+            return render(request, "usuario.html", {
+                'mostrar_login': True,
+                'error_login': 'Ingresa tu nombre y apellido.'
+            })
 
         sala_encontrada = Sala.objects.filter(codigo=codigo_ingresado).first()
 
@@ -141,17 +141,45 @@ def usuario(request):
                 'error_login': f"El código de sala '{codigo_ingresado}' no existe."
             })
 
-        estudiante = Estudiante.objects.filter(nombre__iexact=nombre_ingresado, sala=sala_encontrada).first()
+        estudiante = Estudiante.objects.filter(
+            nombre__iexact=nombre_ingresado,
+            apellido__iexact=apellido_ingresado,
+            sala=sala_encontrada,
+        ).first()
 
         if not estudiante:
-            estudiante_sin_sala = Estudiante.objects.filter(nombre__iexact=nombre_ingresado).first()
+            estudiante = Estudiante.objects.filter(
+                nombre__iexact=nombre_ingresado,
+                sala=sala_encontrada,
+                apellido__in=('', '1'),
+            ).first()
+
+        if estudiante and estudiante.apellido != apellido_ingresado:
+            estudiante.apellido = apellido_ingresado
+            estudiante.save(update_fields=['apellido'])
+
+        if not estudiante:
+            estudiante_sin_sala = Estudiante.objects.filter(
+                nombre__iexact=nombre_ingresado,
+                apellido__iexact=apellido_ingresado,
+                sala__isnull=True,
+            ).first()
+            if not estudiante_sin_sala:
+                estudiante_sin_sala = Estudiante.objects.filter(
+                    nombre__iexact=nombre_ingresado,
+                    apellido__in=('', '1'),
+                    sala__isnull=True,
+                ).first()
+
             if estudiante_sin_sala:
                 estudiante = estudiante_sin_sala
                 estudiante.sala = sala_encontrada
-                estudiante.save()
+                estudiante.apellido = apellido_ingresado
+                estudiante.save(update_fields=['sala', 'apellido'])
             else:
                 estudiante = Estudiante.objects.create(
                     nombre=nombre_ingresado,
+                    apellido=apellido_ingresado,
                     edad=15,
                     tiempo_viaje='< 15 min',
                     sala=sala_encontrada
@@ -181,7 +209,11 @@ def usuario(request):
     g2_labels = [f"Semestre {item['semestre']}" for item in notas_semestre]
     g2_data = [round(item['prom'], 1) for item in notas_semestre]
 
-    tareas_lista = Tarea.objects.filter(estudiante=estudiante, completada=False)[:5]
+    tareas_calendario = list(
+        Tarea.objects.filter(estudiante=estudiante, completada=False)
+        .order_by('fecha_entrega', 'titulo')
+        .values('titulo', 'materia__nombre', 'fecha_entrega', 'completada')
+    )
 
     context = {
         'mostrar_login': False,
@@ -193,7 +225,7 @@ def usuario(request):
         'g1_data': g1_data,
         'g2_labels': g2_labels,
         'g2_data': g2_data,
-        'tareas': tareas_lista,
+        'tareas_calendario': tareas_calendario,
     }
     return render(request, "usuario.html", context)
 
