@@ -101,59 +101,81 @@
                     </a>
                 </div>
             </div>
-            {% include "seguimiento_estudio.html" %}
-            <section id="calendarPanel" class="card chart-card p-3 p-md-4 bg-white mb-4" aria-label="Calendario de entregas">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <button id="calendarPrevious" class="btn btn-outline-primary btn-sm" type="button" aria-label="Mes anterior">&larr;</button>
-                    <h5 id="calendarMonth" class="fw-bold mb-0 text-capitalize" aria-live="polite"></h5>
-                    <button id="calendarNext" class="btn btn-outline-primary btn-sm" type="button" aria-label="Mes siguiente">&rarr;</button>
-                </div>
-                <div class="calendar-grid" id="calendarWeekdays" aria-hidden="true"></div>
-                <div class="calendar-grid" id="calendarDays"></div>
-                <p class="text-muted small mt-3 mb-0">Las tareas asignadas por tu profesor aparecen en la fecha de entrega.</p>
+
+            <nav id="menuEstudiante"
+                class="d-flex flex-wrap gap-2 mb-4"
+                aria-label="Secciones del estudiante">
+                <button type="button" class="btn btn-outline-primary"
+                        data-vista="resumen">Mi resumen</button>
+                <button type="button" class="btn btn-outline-primary"
+                        data-vista="notas">Mis calificaciones</button>
+                <button type="button" class="btn btn-outline-primary"
+                        data-vista="estudio">Mi estudio</button>
+                <button type="button" class="btn btn-outline-primary"
+                        data-vista="calendario">Tareas y calendario</button>
+            </nav>
+
+            <section data-vista-contenido="estudio">
+                {% include "seguimiento_estudio.html" %}
+            </section>
+
+            <section data-vista-contenido="calendario"></section>
+                <section id="calendarPanel" class="card chart-card p-3 p-md-4 bg-white mb-4" aria-label="Calendario de entregas">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <button id="calendarPrevious" class="btn btn-outline-primary btn-sm" type="button" aria-label="Mes anterior">&larr;</button>
+                        <h5 id="calendarMonth" class="fw-bold mb-0 text-capitalize" aria-live="polite"></h5>
+                        <button id="calendarNext" class="btn btn-outline-primary btn-sm" type="button" aria-label="Mes siguiente">&rarr;</button>
+                    </div>
+                    <div class="calendar-grid" id="calendarWeekdays" aria-hidden="true"></div>
+                    <div class="calendar-grid" id="calendarDays"></div>
+                    <p class="text-muted small mt-3 mb-0">Las tareas asignadas por tu profesor aparecen en la fecha de entrega.</p>
+                </section>
             </section>
 
             <!-- 1. KPIs -->
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="card kpi-card p-3 bg-white">
-                        <span class="text-muted small fw-bold text-uppercase">PROMEDIO GENERAL</span>
-                        <h2 class="fw-bold text-primary my-1">{{ kpi_promedio }} <span class="fs-6 text-muted fw-normal">/ 7.0</span></h2>
-                        <span class="text-success small">Rendimiento académico actual</span>
+            <section data-vista-contenido="resumen"></section>
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card kpi-card p-3 bg-white">
+                            <span class="text-muted small fw-bold text-uppercase">PROMEDIO GENERAL</span>
+                            <h2 class="fw-bold text-primary my-1">{{ kpi_promedio }} <span class="fs-6 text-muted fw-normal">/ 7.0</span></h2>
+                            <span class="text-success small">Rendimiento académico actual</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card kpi-card p-3 bg-white">
+                            <span class="text-muted small fw-bold text-uppercase">MATERIAS INSCRITAS</span>
+                            <h2 class="fw-bold text-dark my-1">{{ kpi_materias }}</h2>
+                            <span class="text-muted small">Asignaturas registradas</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card kpi-card p-3 bg-white">
+                            <span class="text-muted small fw-bold text-uppercase">TAREAS PENDIENTES</span>
+                            <h2 class="fw-bold text-danger my-1">{{ kpi_tareas }}</h2>
+                            <span class="text-danger small">Pendientes de entrega</span>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card kpi-card p-3 bg-white">
-                        <span class="text-muted small fw-bold text-uppercase">MATERIAS INSCRITAS</span>
-                        <h2 class="fw-bold text-dark my-1">{{ kpi_materias }}</h2>
-                        <span class="text-muted small">Asignaturas registradas</span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card kpi-card p-3 bg-white">
-                        <span class="text-muted small fw-bold text-uppercase">TAREAS PENDIENTES</span>
-                        <h2 class="fw-bold text-danger my-1">{{ kpi_tareas }}</h2>
-                        <span class="text-danger small">Pendientes de entrega</span>
-                    </div>
-                </div>
-            </div>
+            </section>
 
             <!-- 2. GRÁFICOS -->
-            <div class="row mb-4">
-                <div class="col-md-6 mb-4">
-                    <div class="card chart-card p-3 bg-white h-100">
-                        <h6 class="fw-bold text-muted text-center mb-3">Mis Calificaciones por Materia</h6>
-                        <canvas id="chartMisNotas"></canvas>
+            <section data-vista-contenido="notas"></section>
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-4">
+                        <div class="card chart-card p-3 bg-white h-100">
+                            <h6 class="fw-bold text-muted text-center mb-3">Mis Calificaciones por Materia</h6>
+                            <canvas id="chartMisNotas"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card chart-card p-3 bg-white h-100">
+                            <h6 class="fw-bold text-muted text-center mb-3">Progreso por Semestre</h6>
+                            <canvas id="chartProgreso"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card chart-card p-3 bg-white h-100">
-                        <h6 class="fw-bold text-muted text-center mb-3">Progreso por Semestre</h6>
-                        <canvas id="chartProgreso"></canvas>
-                    </div>
-                </div>
-            </div>
-
+            </section>
             {% endif %}
 
         </div>
@@ -228,11 +250,8 @@
         }
     }
 
-    calendarToggle.addEventListener('click', () => {
-        const isHidden = calendarPanel.classList.contains('d-none');
-        calendarPanel.classList.toggle('d-none', !isHidden);
-        calendarToggle.setAttribute('aria-expanded', String(isHidden));
-        if (isHidden) renderCalendar();
+    calendarToggle.addEventListener("click", () => {
+        window.abrirVistaEstudiante("calendario");
     });
 
     document.getElementById('calendarPrevious').addEventListener('click', () => {
@@ -258,6 +277,63 @@
         data: { labels: g2Labels, datasets: [{ label: 'Evolución de Notas', data: g2Data, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.2 }] },
         options: { responsive: true, scales: { y: { min: 1, max: 7 } } }
     });
+</script>
+
+<script>
+(() => {
+    const menu = document.getElementById("menuEstudiante");
+    const botones = [...menu.querySelectorAll("[data-vista]")];
+    const secciones = [
+        ...document.querySelectorAll("[data-vista-contenido]")
+    ];
+
+    const graficos = [
+        document.getElementById("chartMisNotas"),
+        document.getElementById("chartProgreso")
+    ];
+
+    window.abrirVistaEstudiante = function(nombre) {
+        if (!secciones.some(s => s.dataset.vistaContenido === nombre)) {
+            nombre = "resumen";
+        }
+
+        secciones.forEach(s => {
+            s.hidden = s.dataset.vistaContenido !== nombre;
+        });
+
+        botones.forEach(b => {
+            const activo = b.dataset.vista === nombre;
+            b.classList.toggle("btn-primary", activo);
+            b.classList.toggle("btn-outline-primary", !activo);
+            b.setAttribute("aria-pressed", String(activo));
+        });
+
+        if (nombre === "notas") {
+            requestAnimationFrame(() => {
+                graficos.forEach(canvas => {
+                    if (canvas) Chart.getChart(canvas)?.resize();
+                });
+            });
+        }
+
+        try {
+            sessionStorage.setItem("estudiante-vista", nombre);
+        } catch (_) {}
+    };
+
+    botones.forEach(b => {
+        b.addEventListener("click", () => {
+            window.abrirVistaEstudiante(b.dataset.vista);
+        });
+    });
+
+    let inicial = "resumen";
+    try {
+        inicial = sessionStorage.getItem("estudiante-vista") || inicial;
+    } catch (_) {}
+
+    window.abrirVistaEstudiante(inicial);
+})();
 </script>
 {% endif %}
 

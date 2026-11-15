@@ -1,0 +1,504 @@
+<div id="panelProfesor" data-sala="{{ sala_activa.id }}">
+    <p class="text-muted">
+        Período de calificaciones:
+        <strong>{{ periodo_label }}</strong>
+    </p>
+
+    <nav class="d-flex flex-wrap gap-2 mb-4"
+         aria-label="Secciones del profesor">
+        <button type="button" class="btn btn-outline-primary"
+                data-seccion="resumen">Resumen</button>
+        <button type="button" class="btn btn-outline-primary"
+                data-seccion="estudiantes">Estudiantes</button>
+        <button type="button" class="btn btn-outline-primary"
+                data-seccion="calificaciones">Calificaciones</button>
+        <button type="button" class="btn btn-outline-primary"
+                data-seccion="habitos">Hábitos de estudio</button>
+        <button type="button" class="btn btn-outline-primary"
+                data-seccion="tareas">Tareas y calendario</button>
+        <button type="button" class="btn btn-outline-primary"
+                data-seccion="configuracion">Configuración</button>
+    </nav>
+
+    <!-- RESUMEN -->
+    <section data-contenido="resumen">
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card p-4 h-100">
+                    <span class="text-muted">Estudiantes</span>
+                    <strong class="fs-2">{{ kpi_total_estudiantes }}</strong>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card p-4 h-100">
+                    <span class="text-muted">
+                        Promedio de las notas del período
+                    </span>
+                    <strong class="fs-2">
+                        {% if panel_promedio is not None %}
+                            {{ panel_promedio|floatformat:1 }}
+                        {% else %}
+                            Sin datos
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card p-4 h-100">
+                    <span class="text-muted">
+                        Tareas pendientes · todos los períodos
+                    </span>
+                    <strong class="fs-2">{{ kpi_tareas_pendientes }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card p-4 h-100">
+                    <h5>Distribución de promedios</h5>
+                    <p class="small text-muted">
+                        Cada estudiante cuenta una vez.
+                        Selecciona una barra para ver quiénes integran el grupo.
+                    </p>
+
+                    {% if panel_filas %}
+                        <canvas id="panelDistribucion"></canvas>
+                    {% else %}
+                        <p>Aún no hay estudiantes.</p>
+                    {% endif %}
+
+                    <button type="button"
+                            class="btn btn-outline-primary mt-3"
+                            data-seccion="estudiantes">
+                        Ver estudiantes
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card p-4 h-100">
+                    <h5>Evolución del promedio</h5>
+                    <p class="small text-muted">
+                        Promedio de las notas registradas por semestre y año.
+                        Selecciona un punto para consultar sus notas.
+                    </p>
+
+                    {% if panel_periodos %}
+                        <canvas id="panelEvolucion"></canvas>
+                        <button type="button"
+                                class="btn btn-outline-primary mt-3"
+                                data-seccion="calificaciones">
+                            Ver períodos
+                        </button>
+                    {% else %}
+                        <p>Aún no hay calificaciones.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ESTUDIANTES -->
+    <section data-contenido="estudiantes" hidden>
+        <h4>Estudiantes</h4>
+
+        <label for="panelFiltro" class="form-label">
+            Filtrar por promedio del período seleccionado
+        </label>
+        <select id="panelFiltro" class="form-select mb-3">
+            <option value="">Todos</option>
+            {% for rango in panel_rangos %}
+                <option value="{{ forloop.counter0 }}">{{ rango }}</option>
+            {% endfor %}
+        </select>
+
+        <p id="panelSinResultados" class="alert alert-info" hidden>
+            No hay estudiantes en este grupo.
+        </p>
+
+        {% for fila in panel_filas %}
+        <details class="card p-3 mb-3"
+                 data-alumno-grupo="{{ fila.grupo }}">
+            <summary>
+                <strong>
+                    {{ fila.estudiante.nombre }}
+                    {{ fila.estudiante.apellido }}
+                </strong>
+                · Promedio:
+                {% if fila.promedio is not None %}
+                    {{ fila.promedio|floatformat:1 }}
+                {% else %}
+                    Sin notas
+                {% endif %}
+            </summary>
+
+            <div class="mt-3">
+                <h6>Notas de {{ periodo_label }}</h6>
+                <ul>
+                    {% for nota in fila.notas %}
+                    <li>
+                        {{ nota.materia.nombre }}:
+                        {{ nota.nota|floatformat:1 }}
+                    </li>
+                    {% empty %}
+                    <li>No hay notas en este período.</li>
+                    {% endfor %}
+                </ul>
+
+                <h6>Estudio de la semana actual</h6>
+                <p>
+                    {{ fila.minutos|default_if_none:"Sin registros" }}
+                    {% if fila.minutos is not None %}minutos{% endif %}
+                    · Meta: {{ fila.estudiante.meta_semanal_minutos }} minutos
+                </p>
+
+                <h6>Últimos registros de estudio</h6>
+                <ul>
+                    {% for registro in fila.registros %}
+                    <li>
+                        {{ registro.fecha|date:"d/m/Y" }}:
+                        {{ registro.minutos }} minutos
+                    </li>
+                    {% empty %}
+                    <li>Aún no hay registros.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </details>
+        {% empty %}
+        <p>Aún no hay estudiantes inscritos en esta sala.</p>
+        {% endfor %}
+    </section>
+
+    <!-- CALIFICACIONES -->
+    <section data-contenido="calificaciones" hidden>
+        <div class="d-flex flex-wrap gap-2 justify-content-between mb-3">
+            <h4>Calificaciones</h4>
+            <button class="btn btn-primary" type="button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalNuevaNota">
+                Registrar nota
+            </button>
+        </div>
+
+        <p class="text-muted">
+            Las notas nuevas se registran en {{ periodo_actual_label }},
+            aunque estés consultando otro período.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <form method="post" action="{% url 'administrador' %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-secondary"
+                        name="ver_semestre_anterior" value="1"
+                        {% if es_periodo_inicial %}disabled{% endif %}>
+                    Semestre anterior
+                </button>
+            </form>
+
+            {% if viendo_historial %}
+            <form method="post" action="{% url 'administrador' %}">
+                {% csrf_token %}
+                <button class="btn btn-outline-primary"
+                        name="volver_semestre_actual" value="1">
+                    Volver al actual
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <label for="panelPeriodo" class="form-label">
+            Consultar las notas de un período
+        </label>
+        <select id="panelPeriodo" class="form-select mb-3">
+            {% for periodo in panel_periodos %}
+                <option value="{{ forloop.counter0 }}">
+                    {{ periodo.label }}
+                </option>
+            {% empty %}
+                <option>No hay períodos con notas</option>
+            {% endfor %}
+        </select>
+
+        {% for periodo in panel_periodos %}
+        <div class="card p-3" data-periodo="{{ forloop.counter0 }}" hidden>
+            <h5>{{ periodo.label }}</h5>
+            <p>Promedio: {{ periodo.promedio|floatformat:1 }}</p>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Estudiante</th>
+                            <th>Asignatura registrada</th>
+                            <th>Nota</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for nota in periodo.notas %}
+                        <tr>
+                            <td>
+                                {{ nota.estudiante.nombre }}
+                                {{ nota.estudiante.apellido }}
+                            </td>
+                            <td>{{ nota.materia.nombre }}</td>
+                            <td>{{ nota.nota|floatformat:1 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <!-- HÁBITOS -->
+    <section data-contenido="habitos" hidden>
+        <h4>Hábitos de estudio</h4>
+        <p class="text-muted">
+            Registros declarados desde el lunes hasta hoy.
+            La ausencia de registros no significa cero minutos de estudio.
+        </p>
+
+        <div class="card p-3 table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Estudiante</th>
+                        <th>Minutos registrados</th>
+                        <th>Meta semanal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fila in panel_filas %}
+                    <tr>
+                        <td>
+                            {{ fila.estudiante.nombre }}
+                            {{ fila.estudiante.apellido }}
+                        </td>
+                        <td>
+                            {{ fila.minutos|default_if_none:"Sin registros" }}
+                        </td>
+                        <td>
+                            {{ fila.estudiante.meta_semanal_minutos }} min
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3">Aún no hay estudiantes.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- TAREAS -->
+    <section data-contenido="tareas" hidden>
+        <div class="d-flex flex-wrap gap-2 justify-content-between mb-3">
+            <h4>Tareas y fechas de entrega</h4>
+            <button class="btn btn-primary" type="button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalNuevaTarea">
+                Asignar tarea
+            </button>
+        </div>
+
+        <p class="text-muted">
+            Una fila por estudiante asignado, ordenadas por fecha.
+        </p>
+
+        <div class="card p-3 table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Entrega</th>
+                        <th>Tarea</th>
+                        <th>Estudiante</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tarea in panel_tareas %}
+                    <tr>
+                        <td>{{ tarea.fecha_entrega|date:"d/m/Y" }}</td>
+                        <td>{{ tarea.titulo }}</td>
+                        <td>
+                            {{ tarea.estudiante.nombre }}
+                            {{ tarea.estudiante.apellido }}
+                        </td>
+                        <td>
+                            {% if tarea.completada %}
+                                Completada
+                            {% else %}
+                                Pendiente
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4">No hay tareas asignadas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- CONFIGURACIÓN -->
+    <section data-contenido="configuracion" hidden>
+        <div class="card p-4">
+            <h4>Configuración de la sala</h4>
+            <p>Asignatura: <strong>{{ sala_activa.asignatura }}</strong></p>
+            <p>Profesor: {{ sala_activa.nombre_profesor }}</p>
+            <p>Código: <strong>{{ sala_activa.codigo }}</strong></p>
+            <p>Período actual: {{ periodo_actual_label }}</p>
+
+            <div>
+                <button class="btn btn-outline-danger" type="button"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalTerminarSemestre">
+                    Terminar semestre
+                </button>
+            </div>
+        </div>
+    </section>
+</div>
+
+{{ panel_rangos|json_script:"panelRangos" }}
+{{ panel_distribucion|json_script:"panelDistribucionDatos" }}
+{{ panel_evolucion_labels|json_script:"panelEvolucionLabels" }}
+{{ panel_evolucion_data|json_script:"panelEvolucionDatos" }}
+
+<script>
+(() => {
+    const panel = document.getElementById("panelProfesor");
+    const clave = `profesor-seccion-${panel.dataset.sala}`;
+    const botones = [...panel.querySelectorAll("[data-seccion]")];
+    const secciones = [...panel.querySelectorAll("[data-contenido]")];
+
+    function abrir(nombre) {
+        if (!secciones.some(s => s.dataset.contenido === nombre)) {
+            nombre = "resumen";
+        }
+
+        secciones.forEach(s => {
+            s.hidden = s.dataset.contenido !== nombre;
+        });
+
+        botones.forEach(b => {
+            const activo = b.dataset.seccion === nombre;
+            b.classList.toggle("btn-primary", activo);
+            b.classList.toggle("btn-outline-primary", !activo);
+            b.setAttribute("aria-pressed", String(activo));
+        });
+
+        try {
+            sessionStorage.setItem(clave, nombre);
+        } catch (_) {}
+    }
+
+    botones.forEach(b => {
+        b.addEventListener("click", () => abrir(b.dataset.seccion));
+    });
+
+    let inicial = "resumen";
+    try {
+        inicial = sessionStorage.getItem(clave) || inicial;
+    } catch (_) {}
+    abrir(inicial);
+
+    const filtro = document.getElementById("panelFiltro");
+
+    function filtrar() {
+        let visibles = 0;
+        panel.querySelectorAll("[data-alumno-grupo]").forEach(fila => {
+            fila.hidden = filtro.value !== "" &&
+                fila.dataset.alumnoGrupo !== filtro.value;
+            if (!fila.hidden) visibles++;
+        });
+
+        document.getElementById("panelSinResultados").hidden =
+            visibles > 0 || !panel.querySelector("[data-alumno-grupo]");
+    }
+
+    filtro.addEventListener("change", filtrar);
+    filtrar();
+
+    const periodo = document.getElementById("panelPeriodo");
+
+    function mostrarPeriodo() {
+        panel.querySelectorAll("[data-periodo]").forEach(detalle => {
+            detalle.hidden = detalle.dataset.periodo !== periodo.value;
+        });
+    }
+
+    periodo.addEventListener("change", mostrarPeriodo);
+    mostrarPeriodo();
+
+    const leer = id =>
+        JSON.parse(document.getElementById(id).textContent);
+
+    const distribucion = document.getElementById("panelDistribucion");
+
+    if (distribucion) {
+        new Chart(distribucion, {
+            type: "bar",
+            data: {
+                labels: leer("panelRangos"),
+                datasets: [{
+                    label: "Estudiantes",
+                    data: leer("panelDistribucionDatos"),
+                    backgroundColor: [
+                        "#dc3545", "#f0ad4e", "#3b82f6", "#198754", "#94a3b8"
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 }
+                    }
+                },
+                onClick(event, elementos) {
+                    if (!elementos.length) return;
+                    filtro.value = String(elementos[0].index);
+                    filtrar();
+                    abrir("estudiantes");
+                }
+            }
+        });
+    }
+
+    const evolucion = document.getElementById("panelEvolucion");
+
+    if (evolucion) {
+        new Chart(evolucion, {
+            type: "line",
+            data: {
+                labels: leer("panelEvolucionLabels"),
+                datasets: [{
+                    label: "Promedio de notas",
+                    data: leer("panelEvolucionDatos"),
+                    borderColor: "#2563eb",
+                    pointRadius: 6,
+                    pointHitRadius: 15,
+                    tension: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { min: 1, max: 7 } },
+                onClick(event, elementos) {
+                    if (!elementos.length) return;
+                    periodo.value = String(elementos[0].index);
+                    mostrarPeriodo();
+                    abrir("calificaciones");
+                }
+            }
+        });
+    }
+})();
+</script>

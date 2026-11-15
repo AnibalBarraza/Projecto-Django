@@ -7,6 +7,7 @@ from .seguimiento import contexto_estudio
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Q
+from .panel import datos_panel
 
 def clave_periodo_vista(sala_id):
     return f'periodo_vista_sala_{sala_id}'
@@ -27,7 +28,7 @@ def obtener_periodo_vista(request, sala):
     periodo_actual = ordenar_periodo(sala.semestre_actual, sala.anio_actual)
     periodo_ordenado = ordenar_periodo(semestre, anio)
     if not periodo_inicio <= periodo_ordenado <= periodo_actual:
-        return periodo_actual
+        return sala.semestre_actual, sala.anio_actual
     return periodo
 
 
@@ -99,27 +100,62 @@ def administrador(request):
                 request.session.pop(clave_periodo_vista(sala_activa.id), None)
             return redirect('administrador')
 
-        # 2. Registrar Calificación
         elif 'crear_nota' in request.POST:
-            estudiante_id = request.POST.get('estudiante_id')
-            materia_nombre = request.POST.get('materia_nombre', '').strip()
-            nota = request.POST.get('nota', 7.0)
-            todas_las_salas = Sala.objects.all()
-            sala_id = request.session.get('sala_activa_id')
-            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else todas_las_salas.first()
-            if sala_activa:
-                estudiante = Estudiante.objects.filter(id=estudiante_id, sala=sala_activa).first()
-                if estudiante and materia_nombre:
-                    materia, _ = Materia.objects.get_or_create(nombre=materia_nombre)
-                    Calificacion.objects.create(
-                        estudiante=estudiante,
-                        materia=materia,
-                        semestre=sala_activa.semestre_actual,
-                        anio=sala_activa.anio_actual,
-                        nota=float(nota)
-                    )
-            return redirect('administrador')
+            from decimal import Decimal, InvalidOperation
 
+            sala_activa = Sala.objects.filter(
+                id=request.session.get('sala_activa_id')
+            ).first()
+
+            if not sala_activa:
+                messages.error(request, 'Selecciona una sala primero.')
+                return redirect('administrador')
+
+            try:
+                estudiante_id = int(request.POST.get('estudiante_id', ''))
+                nota = Decimal(
+                    request.POST.get('nota', '').replace(',', '.')
+                )
+
+                if not nota.is_finite() or not Decimal('1') <= nota <= Decimal('7'):
+                    raise ValueError
+
+            except (ValueError, InvalidOperation):
+                messages.error(
+                    request,
+                    'Selecciona un estudiante e ingresa una nota entre 1,0 y 7,0.',
+                )
+                return redirect('administrador')
+
+            estudiante = sala_activa.estudiantes.filter(
+                id=estudiante_id
+            ).first()
+
+            if estudiante is None:
+                messages.error(
+                    request,
+                    'El estudiante no pertenece a la sala activa.',
+                )
+                return redirect('administrador')
+
+            materia, _ = Materia.objects.get_or_create(
+                nombre=sala_activa.asignatura
+            )
+
+            Calificacion.objects.create(
+                estudiante=estudiante,
+                materia=materia,
+                semestre=sala_activa.semestre_actual,
+                anio=sala_activa.anio_actual,
+                nota=float(nota),
+            )
+
+            messages.success(
+                request,
+                'Nota registrada en la asignatura de la sala.',
+            )
+            return redirect('administrador')
+        
         # 3. Asignar Tarea
         elif 'crear_tarea' in request.POST:
             titulo = request.POST.get('titulo', '').strip()
@@ -226,6 +262,9 @@ def administrador(request):
             filter=Q(registros_estudio__fecha__range=(lunes, hoy)),
         ),
     ).order_by("apellido", "nombre")
+    context.update(
+        datos_panel(sala_activa, semestre_vista, anio_vista)
+    )
     return render(request, "administrador.html", context)
 
 def cambiar_sala(request, sala_id):
@@ -316,9 +355,23 @@ def usuario(request):
     g1_labels = [item['materia__nombre'] for item in notas_materia]
     g1_data = [round(item['prom'], 1) for item in notas_materia]
 
-    notas_semestre = Calificacion.objects.filter(estudiante=estudiante).values('semestre').annotate(prom=Avg('nota')).order_by('semestre')
-    g2_labels = [f"Semestre {item['semestre']}" for item in notas_semestre]
-    g2_data = [round(item['prom'], 1) for item in notas_semestre]
+    notas_semestre = (
+        Calificacion.objects
+        .filter(estudiante=estudiante)
+        .values('anio', 'semestre')
+        .annotate(prom=Avg('nota'))
+        .order_by('anio', 'semestre')
+    )
+
+    g2_labels = [
+        f"Semestre {item['semestre']} · {item['anio']}"
+        for item in notas_semestre
+    ]
+
+    g2_data = [
+        round(item['prom'], 1)
+        for item in notas_semestre
+    ]
 
     tareas_calendario = list(
         Tarea.objects.filter(estudiante=estudiante, completada=False)

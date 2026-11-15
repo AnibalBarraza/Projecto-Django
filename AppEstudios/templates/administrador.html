@@ -101,152 +101,7 @@
                 </div>
             </div>
 
-            <!-- BARRA DE ACCIONES PARA EL PROFESOR -->
-            <div class="d-flex flex-wrap gap-2 mb-4">
-                <form method="POST" action="{% url 'administrador' %}">
-                    {% csrf_token %}
-                    <button type="submit" name="ver_semestre_anterior" value="1" class="btn btn-outline-secondary fw-bold" {% if es_periodo_inicial %}disabled aria-disabled="true"{% endif %}>
-                        ← Semestre anterior
-                    </button>
-                </form>
-                {% if viendo_historial %}
-                <form method="POST" action="{% url 'administrador' %}">
-                    {% csrf_token %}
-                    <button type="submit" name="volver_semestre_actual" value="1" class="btn btn-outline-primary fw-bold">
-                        Volver al semestre actual · {{ periodo_actual_label }}
-                    </button>
-                </form>
-                {% endif %}
-                <button type="button" class="btn btn-danger fw-bold" data-bs-toggle="modal" data-bs-target="#modalTerminarSemestre">
-                    Terminar semestre · {{ periodo_actual_label }}
-                </button>
-                <button class="btn btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevaNota">
-                    📝 + Registrar Nota
-                </button>
-                <button class="btn btn-warning fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalNuevaTarea">
-                    📌 + Asignar Tarea
-                </button>
-            </div>
-
-            <!-- 1. KPIs DE LA SALA -->
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <div class="card kpi-card p-3 bg-white">
-                        <span class="text-muted small fw-bold text-uppercase">ALUMNOS EN ESTA SALA</span>
-                        <h2 class="fw-bold text-primary my-1">{{ kpi_total_estudiantes }}</h2>
-                        <span class="text-muted small">Inscritos con el código {{ sala_activa.codigo }}</span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card kpi-card p-3 bg-white">
-                        <span class="text-muted small fw-bold text-uppercase">PROMEDIO DE LA SALA</span>
-                        <h2 class="fw-bold text-dark my-1">{{ kpi_promedio_general }} <span class="fs-6 text-muted fw-normal">/ 7.0</span></h2>
-                        <span class="text-success small">Rendimiento académico actual</span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card kpi-card p-3 bg-white">
-                        <span class="text-muted small fw-bold text-uppercase">TAREAS PENDIENTES</span>
-                        <h2 class="fw-bold text-danger my-1">{{ kpi_tareas_pendientes }}</h2>
-                        <span class="text-danger small">Trabajos sin entregar</span>
-                    </div>
-                </div>
-            </div>
-            <section class="card chart-card p-4 bg-white mb-4">
-                <h5 class="fw-bold">Seguimiento de estudio · semana actual</h5>
-                <p class="small text-muted">
-                    Tiempo declarado desde el lunes hasta hoy.
-                    Este resumen corresponde a la semana actual,
-                    aunque estés consultando calificaciones históricas.
-                </p>
-
-                <div class="table-responsive">
-                    <table class="table align-middle">
-                        <thead>
-                            <tr>
-                                <th>Estudiante</th>
-                                <th>Minutos registrados</th>
-                                <th>Meta semanal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for alumno in resumen_habitos %}
-                            <tr>
-                                <td>{{ alumno.nombre }} {{ alumno.apellido }}</td>
-                                <td>
-                                    {{ alumno.minutos_semana|default_if_none:"Sin registros" }}
-                                </td>
-                                <td>{{ alumno.meta_semanal_minutos }} min</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3">Aún no hay estudiantes en esta sala.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </section>            
-            <!-- 2. GRÁFICOS DE LA SALA -->
-            <div class="row mb-4">
-                <div class="col-md-6 mb-4">
-                    <div class="card chart-card p-3 bg-white h-100">
-                        <h6 class="fw-bold text-muted text-center mb-3">Personas por edad</h6>
-                        <canvas id="chartEdades"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card chart-card p-3 bg-white h-100">
-                        <h6 class="fw-bold text-muted text-center mb-3">Promedio por Materia</h6>
-                        <canvas id="chartMateria"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card chart-card p-3 bg-white h-100">
-                        <h6 class="fw-bold text-muted text-center mb-3">Tiempo de Viaje</h6>
-                        <canvas id="chartViaje"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-6 mb-4">
-                    <div class="card chart-card p-3 bg-white h-100">
-                        <h6 class="fw-bold text-muted text-center mb-3">Promedio de {{ periodo_label }}</h6>
-                        <canvas id="chartSemestre"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. TABLA DE ALUMNOS -->
-            <div class="card table-card p-4 bg-white mb-4">
-                <h5 class="fw-bold mb-1">Listado de Alumnos en {{ sala_activa.asignatura }}</h5>
-                <p class="text-muted small mb-3">Estudiantes asociados a este curso</p>
-                
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th># ID</th>
-                                <th>Nombre</th>
-                                <th>Apellido</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for est in estudiantes %}
-                            <tr>
-                                <td>{{ est.id }}</td>
-                                <td class="fw-bold">{{ est.nombre }}</td>
-                                <td>{{ est.apellido }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="text-center text-muted py-3">
-                                    No hay alumnos en esta sala.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            {% include "panel_profesor.html" %}
 
             {% endif %}
 
@@ -326,20 +181,18 @@
                         <label class="form-label fw-bold small text-muted">Seleccionar Alumno</label>
                         <select name="estudiante_id" class="form-select" required>
                             {% for est in estudiantes %}
-                                <option value="{{ est.id }}">{{ est.nombre }}</option>
+                                <option value="{{ est.id }}">
+                                    {{ est.nombre }} {{ est.apellido }}
+                                </option>
                             {% empty %}
                                 <option value="">No hay alumnos en esta sala</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">Materia / Asignatura</label>
-                        <input type="text" name="materia_nombre" class="form-control" placeholder="Ej: Lenguaje" list="lista_materias" required>
-                        <datalist id="lista_materias">
-                            {% for mat in todas_las_materias %}
-                                <option value="{{ mat.nombre }}">
-                            {% endfor %}
-                        </datalist>
+                        <p class="text-muted">
+                            Asignatura: <strong>{{ sala_activa.asignatura }}</strong>
+                        </p>
                     </div>
                     <div class="row">
                         <div class="col-12 mb-3">
@@ -392,54 +245,7 @@
 <!-- Bootstrap JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-{% if not sin_salas %}
-{{ g1_labels|json_script:"g1_labels_data" }}
-{{ g1_data|json_script:"g1_data_data" }}
-{{ g2_labels|json_script:"g2_labels_data" }}
-{{ g2_data|json_script:"g2_data_data" }}
-{{ g3_labels|json_script:"g3_labels_data" }}
-{{ g3_data|json_script:"g3_data_data" }}
-{{ g4_labels|json_script:"g4_labels_data" }}
-{{ g4_data|json_script:"g4_data_data" }}
 
-<script>
-    const g1Labels = JSON.parse(document.getElementById('g1_labels_data').textContent);
-    const g1Data = JSON.parse(document.getElementById('g1_data_data').textContent);
-
-    const g2Labels = JSON.parse(document.getElementById('g2_labels_data').textContent);
-    const g2Data = JSON.parse(document.getElementById('g2_data_data').textContent);
-
-    const g3Labels = JSON.parse(document.getElementById('g3_labels_data').textContent);
-    const g3Data = JSON.parse(document.getElementById('g3_data_data').textContent);
-
-    const g4Labels = JSON.parse(document.getElementById('g4_labels_data').textContent);
-    const g4Data = JSON.parse(document.getElementById('g4_data_data').textContent);
-
-    new Chart(document.getElementById('chartEdades'), {
-        type: 'bar',
-        data: { labels: g1Labels, datasets: [{ label: 'Alumnos', data: g1Data, backgroundColor: '#3b82f6' }] },
-        options: { responsive: true, scales: { y: { beginAtZero: true } } }
-    });
-
-    new Chart(document.getElementById('chartMateria'), {
-        type: 'doughnut',
-        data: { labels: g4Labels, datasets: [{ data: g4Data, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] }] },
-        options: { responsive: true }
-    });
-
-    new Chart(document.getElementById('chartViaje'), {
-        type: 'bar',
-        data: { labels: g2Labels, datasets: [{ label: 'Alumnos', data: g2Data, backgroundColor: '#06b6d4' }] },
-        options: { indexAxis: 'y', responsive: true, scales: { x: { beginAtZero: true } } }
-    });
-
-    new Chart(document.getElementById('chartSemestre'), {
-        type: 'line',
-        data: { labels: g3Labels, datasets: [{ label: 'Promedio', data: g3Data, borderColor: '#2563eb', backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.3 }] },
-        options: { responsive: true, scales: { y: { min: 1, max: 7 } } }
-    });
-</script>
-{% endif %}
 
 </body>
 </html>
