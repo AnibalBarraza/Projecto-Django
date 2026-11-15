@@ -2,7 +2,7 @@ from datetime import datetime
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Avg, Count
-from .models import Sala, Estudiante, Materia, Calificacion, Tarea
+from .models import Sala, Estudiante, Materia, Calificacion, Tarea, Inscripcion
 from .seguimiento import contexto_estudio
 from datetime import timedelta
 from django.utils import timezone
@@ -143,6 +143,7 @@ def administrador(request):
             )
 
             Calificacion.objects.create(
+                sala=sala_activa,
                 estudiante=estudiante,
                 materia=materia,
                 semestre=sala_activa.semestre_actual,
@@ -175,6 +176,7 @@ def administrador(request):
                     materia, _ = Materia.objects.get_or_create(nombre=sala_activa.asignatura)
                     Tarea.objects.bulk_create([
                         Tarea(
+                            sala=sala_activa,
                             estudiante=estudiante,
                             materia=materia,
                             titulo=titulo,
@@ -334,7 +336,10 @@ def usuario(request):
                     tiempo_viaje='< 15 min',
                     sala=sala_encontrada
                 )
-
+        Inscripcion.objects.get_or_create(
+            estudiante=estudiante,
+            sala=sala_encontrada,
+        )
         request.session['estudiante_id'] = estudiante.id
         return redirect('usuario')
 
