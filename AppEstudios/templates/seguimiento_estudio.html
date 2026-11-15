@@ -1,0 +1,84 @@
+{% for message in messages %}
+<div class="alert alert-info" role="status">{{ message }}</div>
+{% endfor %}
+
+<section class="row g-3 mb-4" aria-label="Mi plan de estudio">
+    <div class="col-lg-7">
+        <div class="card chart-card p-4 bg-white h-100">
+            <span class="text-primary small fw-bold">
+                MI PLAN DE ESTUDIO
+            </span>
+
+            <h4 class="fw-bold mt-2">Cada avance cuenta</h4>
+            <p class="text-muted">
+                Tu avance desde el lunes hasta hoy.
+                Elige una meta que puedas sostener.
+            </p>
+
+            <p class="fs-3 fw-bold">
+                {{ minutos_semana }}
+                <span class="fs-6 text-muted">
+                    / {{ estudiante.meta_semanal_minutos }} minutos
+                </span>
+            </p>
+
+            <progress
+                class="w-100"
+                value="{{ progreso_meta }}"
+                max="100"
+                aria-label="Progreso de mi meta semanal">
+                {{ progreso_meta }}%
+            </progress>
+
+            <p class="small mt-2">
+                {{ progreso_meta }}% de tu meta semanal
+            </p>
+
+            <div class="alert alert-primary">
+                {{ consejo_estudio }}
+            </div>
+
+            <p class="small text-muted mb-0">
+                Esta orientación se basa en tus registros y tu meta.
+                No predice tus calificaciones.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card chart-card p-4 bg-white h-100">
+            <h5 class="fw-bold">Registrar mi estudio</h5>
+
+            <p class="small text-muted">
+                Ingresa el total del día. Guardar nuevamente una fecha
+                reemplaza su registro anterior.
+            </p>
+
+            <form method="post" action="{% url 'guardar_estudio' %}">
+                {% csrf_token %}
+                {{ formulario_estudio.as_p }}
+
+                <button class="btn btn-primary w-100" type="submit">
+                    Guardar avance
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <details class="card chart-card p-3 bg-white">
+            <summary class="fw-bold">Mis últimos registros</summary>
+
+            <ul class="mt-3 mb-0">
+                {% for registro in registros_recientes %}
+                <li>
+                    {{ registro.fecha|date:"d/m/Y" }}:
+                    {{ registro.minutos }} minutos
+                </li>
+                {% empty %}
+                <li>Aún no has registrado tiempo de estudio.</li>
+                {% endfor %}
+            </ul>
+        </details>
+    </div>
+</section>

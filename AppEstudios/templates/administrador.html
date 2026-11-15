@@ -152,7 +152,41 @@
                     </div>
                 </div>
             </div>
+            <section class="card chart-card p-4 bg-white mb-4">
+                <h5 class="fw-bold">Seguimiento de estudio · semana actual</h5>
+                <p class="small text-muted">
+                    Tiempo declarado desde el lunes hasta hoy.
+                    Este resumen corresponde a la semana actual,
+                    aunque estés consultando calificaciones históricas.
+                </p>
 
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Estudiante</th>
+                                <th>Minutos registrados</th>
+                                <th>Meta semanal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alumno in resumen_habitos %}
+                            <tr>
+                                <td>{{ alumno.nombre }} {{ alumno.apellido }}</td>
+                                <td>
+                                    {{ alumno.minutos_semana|default_if_none:"Sin registros" }}
+                                </td>
+                                <td>{{ alumno.meta_semanal_minutos }} min</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3">Aún no hay estudiantes en esta sala.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>            
             <!-- 2. GRÁFICOS DE LA SALA -->
             <div class="row mb-4">
                 <div class="col-md-6 mb-4">

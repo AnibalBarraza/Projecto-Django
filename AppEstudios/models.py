@@ -31,6 +31,7 @@ class Estudiante(models.Model):
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
     edad = models.IntegerField()
+    meta_semanal_minutos = models.PositiveIntegerField(default=300)
     
     TIEMPO_VIAJE_CHOICES = [
         ('< 15 min', 'Menos de 15 minutos'),
@@ -70,3 +71,28 @@ class Tarea(models.Model):
 
     def __str__(self):
         return f"{self.titulo} ({self.materia.nombre})"
+
+class RegistroEstudio(models.Model):
+    estudiante = models.ForeignKey(
+        Estudiante,
+        on_delete=models.CASCADE,
+        related_name="registros_estudio",
+    )
+    fecha = models.DateField()
+    minutos = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["-fecha"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["estudiante", "fecha"],
+                name="estudio_unico_por_dia",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(minutos__lte=1440),
+                name="estudio_maximo_diario",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.estudiante.nombre}: {self.minutos} min ({self.fecha})"

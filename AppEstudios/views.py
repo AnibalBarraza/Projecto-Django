@@ -3,7 +3,10 @@ from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Avg, Count
 from .models import Sala, Estudiante, Materia, Calificacion, Tarea
-
+from .seguimiento import contexto_estudio
+from datetime import timedelta
+from django.utils import timezone
+from django.db.models import Sum, Q
 
 def clave_periodo_vista(sala_id):
     return f'periodo_vista_sala_{sala_id}'
@@ -214,6 +217,15 @@ def administrador(request):
         'g4_data': g4_data,
         'estudiantes': estudiantes_sala,
     }
+    hoy = timezone.localdate()
+    lunes = hoy - timedelta(days=hoy.weekday())
+
+    context["resumen_habitos"] = estudiantes_sala.annotate(
+        minutos_semana=Sum(
+            "registros_estudio__minutos",
+            filter=Q(registros_estudio__fecha__range=(lunes, hoy)),
+        ),
+    ).order_by("apellido", "nombre")
     return render(request, "administrador.html", context)
 
 def cambiar_sala(request, sala_id):
@@ -326,6 +338,7 @@ def usuario(request):
         'g2_data': g2_data,
         'tareas_calendario': tareas_calendario,
     }
+    context.update(contexto_estudio(estudiante))
     return render(request, "usuario.html", context)
 
 def logout_usuario(request):
