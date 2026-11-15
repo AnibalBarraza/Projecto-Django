@@ -14,6 +14,11 @@ urlpatterns = [
         cuentas.IngresarView.as_view(),
         name="ingresar",
     ),
+    path(
+        "elegir-rol/",
+        cuentas.elegir_rol,
+        name="elegir_rol",
+    ),
     path("registrarse/", cuentas.registrarse, name="registrarse"),
     path("mi-cuenta/", cuentas.mi_cuenta, name="mi_cuenta"),
     path("salir/", cuentas.salir, name="salir"),
