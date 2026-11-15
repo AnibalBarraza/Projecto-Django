@@ -8,12 +8,12 @@ from .models import Calificacion, RegistroEstudio, Tarea
 
 def datos_panel(sala, semestre, anio):
     estudiantes = list(
-        sala.estudiantes.order_by("apellido", "nombre")
+        sala.alumnos_inscritos.order_by("apellido", "nombre")
     )
 
     notas = list(
         Calificacion.objects
-        .filter(estudiante__sala=sala)
+        .filter(sala=sala)
         .select_related("materia", "estudiante")
         .order_by("anio", "semestre", "id")
     )
@@ -31,7 +31,7 @@ def datos_panel(sala, semestre, anio):
     minutos = defaultdict(int)
 
     registros = RegistroEstudio.objects.filter(
-        estudiante__sala=sala,
+        estudiante__inscripciones__sala=sala,
         fecha__range=(lunes, hoy),
     )
 
@@ -110,7 +110,7 @@ def datos_panel(sala, semestre, anio):
         ],
         "panel_tareas": (
             Tarea.objects
-            .filter(estudiante__sala=sala)
+            .filter(sala=sala)
             .select_related("estudiante")
             .order_by("fecha_entrega")
         ),

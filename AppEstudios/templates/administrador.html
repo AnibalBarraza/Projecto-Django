@@ -36,6 +36,7 @@
 
         <!-- Main Content Area -->
         <div class="col-md-10 p-4">
+            {% include "barra_cuenta.html" %}
             {% if messages %}
                 {% for message in messages %}
                 <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-warning{% endif %}" role="alert">{{ message }}</div>

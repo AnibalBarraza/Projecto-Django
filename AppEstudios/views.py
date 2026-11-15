@@ -8,6 +8,13 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Q
 from .panel import datos_panel
+from django.contrib.auth.decorators import login_required
+
+from .cuentas import (
+    acceso_profesor,
+    salas_del_profesor,
+    salir,
+)
 
 def clave_periodo_vista(sala_id):
     return f'periodo_vista_sala_{sala_id}'
@@ -45,20 +52,28 @@ def ordenar_periodo(semestre, anio):
 def index(request):
     return render(request, "index.html")
 
+@acceso_profesor
 def administrador(request):
     if request.method == 'POST':
         # 1. Crear Sala
         if 'crear_sala' in request.POST:
-            profesor = request.POST.get('nombre_profesor', '').strip()
+            profesor = (
+                request.user.get_full_name()
+                or request.user.get_username()
+            )
             asignatura = request.POST.get('asignatura', '').strip()
             if profesor and asignatura:
-                nueva_sala = Sala.objects.create(nombre_profesor=profesor, asignatura=asignatura)
+                nueva_sala = Sala.objects.create(
+                    nombre_profesor=profesor,
+                    asignatura=asignatura,
+                    profesor=request.user,
+                )
                 request.session['sala_activa_id'] = nueva_sala.id
                 return redirect('administrador')
 
         elif 'terminar_semestre' in request.POST:
             sala_id = request.session.get('sala_activa_id')
-            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else Sala.objects.first()
+            sala_activa = salas_del_profesor(request.user).filter(id=sala_id).first() if sala_id else salas_del_profesor(request.user).first()
             confirmacion = request.POST.get('confirmacion', '').strip().casefold()
             if confirmacion != 'si':
                 messages.error(request, 'Escribe SI para confirmar el cierre del semestre.')
@@ -79,7 +94,7 @@ def administrador(request):
 
         elif 'ver_semestre_anterior' in request.POST:
             sala_id = request.session.get('sala_activa_id')
-            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else Sala.objects.first()
+            sala_activa = salas_del_profesor(request.user).filter(id=sala_id).first() if sala_id else salas_del_profesor(request.user).first()
             if sala_activa:
                 semestre, anio = obtener_periodo_vista(request, sala_activa)
                 periodo_inicio = ordenar_periodo(
@@ -95,7 +110,7 @@ def administrador(request):
 
         elif 'volver_semestre_actual' in request.POST:
             sala_id = request.session.get('sala_activa_id')
-            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else Sala.objects.first()
+            sala_activa = salas_del_profesor(request.user).filter(id=sala_id).first() if sala_id else salas_del_profesor(request.user).first()
             if sala_activa:
                 request.session.pop(clave_periodo_vista(sala_activa.id), None)
             return redirect('administrador')
@@ -103,7 +118,7 @@ def administrador(request):
         elif 'crear_nota' in request.POST:
             from decimal import Decimal, InvalidOperation
 
-            sala_activa = Sala.objects.filter(
+            sala_activa = salas_del_profesor(request.user).filter(
                 id=request.session.get('sala_activa_id')
             ).first()
 
@@ -127,7 +142,7 @@ def administrador(request):
                 )
                 return redirect('administrador')
 
-            estudiante = sala_activa.estudiantes.filter(
+            estudiante = sala_activa.alumnos_inscritos.filter(
                 id=estudiante_id
             ).first()
 
@@ -167,11 +182,11 @@ def administrador(request):
                 messages.error(request, 'Ingresa una fecha válida en formato DD/MM/AAAA.')
                 return redirect('administrador')
 
-            todas_las_salas = Sala.objects.all()
+            todas_las_salas = salas_del_profesor(request)
             sala_id = request.session.get('sala_activa_id')
-            sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else todas_las_salas.first()
+            sala_activa = salas_del_profesor(request.user).filter(id=sala_id).first() if sala_id else todas_las_salas.first()
             if sala_activa and titulo and fecha_entrega:
-                estudiantes_sala = Estudiante.objects.filter(sala=sala_activa)
+                estudiantes_sala = sala_activa.alumnos_inscritos.all()
                 if estudiantes_sala.exists():
                     materia, _ = Materia.objects.get_or_create(nombre=sala_activa.asignatura)
                     Tarea.objects.bulk_create([
@@ -187,16 +202,16 @@ def administrador(request):
                     ])
             return redirect('administrador')
 
-    todas_las_salas = Sala.objects.all()
+    todas_las_salas = salas_del_profesor(request.user)
     sala_id = request.session.get('sala_activa_id')
-    sala_activa = Sala.objects.filter(id=sala_id).first() if sala_id else todas_las_salas.first()
+    sala_activa = salas_del_profesor(request.user).filter(id=sala_id).first() if sala_id else todas_las_salas.first()
 
     if not sala_activa:
         return render(request, "administrador.html", {'sin_salas': True, 'todas_las_salas': []})
 
     request.session['sala_activa_id'] = sala_activa.id
 
-    estudiantes_sala = Estudiante.objects.filter(sala=sala_activa)
+    estudiantes_sala = sala_activa.alumnos_inscritos.all()
     todas_las_materias = Materia.objects.all()
     semestre_actual = sala_activa.semestre_actual
     anio_actual = sala_activa.anio_actual
@@ -211,12 +226,17 @@ def administrador(request):
 
     total_estudiantes = estudiantes_sala.count()
     calificaciones_periodo = Calificacion.objects.filter(
+        sala=sala_activa,
         estudiante__in=estudiantes_sala,
         semestre=semestre_vista,
         anio=anio_vista,
     )
     promedio_periodo = calificaciones_periodo.aggregate(Avg('nota'))['nota__avg'] or 0.0
-    tareas_pendientes = Tarea.objects.filter(estudiante__in=estudiantes_sala, completada=False).count()
+    tareas_pendientes = Tarea.objects.filter(
+        sala=sala_activa,
+        estudiante__in=estudiantes_sala,
+        completada=False,
+    ).count()
 
     edades_query = estudiantes_sala.values('edad').annotate(total=Count('id')).order_by('edad')
     g1_labels = [f"{item['edad']} años" for item in edades_query]
@@ -269,88 +289,24 @@ def administrador(request):
     )
     return render(request, "administrador.html", context)
 
+@acceso_profesor
 def cambiar_sala(request, sala_id):
-    request.session['sala_activa_id'] = sala_id
-    return redirect('administrador')
+    get_object_or_404(
+        salas_del_profesor(request.user),
+        pk=sala_id,
+    )
+    request.session["sala_activa_id"] = sala_id
+    return redirect("administrador")
 
+@login_required(login_url="ingresar")
 def usuario(request):
-    if request.method == 'POST':
-        nombre_ingresado = request.POST.get('nombre_estudiante', '').strip()
-        apellido_ingresado = request.POST.get('apellido_estudiante', '').strip()
-        codigo_ingresado = request.POST.get('codigo_sala', '').strip().upper()
+    estudiante = Estudiante.objects.filter(
+        usuario=request.user
+    ).first()
 
-        if not nombre_ingresado or not apellido_ingresado:
-            return render(request, "usuario.html", {
-                'mostrar_login': True,
-                'error_login': 'Ingresa tu nombre y apellido.'
-            })
+    if estudiante is None:
+        return redirect("mi_cuenta")
 
-        sala_encontrada = Sala.objects.filter(codigo=codigo_ingresado).first()
-
-        if not sala_encontrada:
-            return render(request, "usuario.html", {
-                'mostrar_login': True,
-                'error_login': f"El código de sala '{codigo_ingresado}' no existe."
-            })
-
-        estudiante = Estudiante.objects.filter(
-            nombre__iexact=nombre_ingresado,
-            apellido__iexact=apellido_ingresado,
-            sala=sala_encontrada,
-        ).first()
-
-        if not estudiante:
-            estudiante = Estudiante.objects.filter(
-                nombre__iexact=nombre_ingresado,
-                sala=sala_encontrada,
-                apellido__in=('', '1'),
-            ).first()
-
-        if estudiante and estudiante.apellido != apellido_ingresado:
-            estudiante.apellido = apellido_ingresado
-            estudiante.save(update_fields=['apellido'])
-
-        if not estudiante:
-            estudiante_sin_sala = Estudiante.objects.filter(
-                nombre__iexact=nombre_ingresado,
-                apellido__iexact=apellido_ingresado,
-                sala__isnull=True,
-            ).first()
-            if not estudiante_sin_sala:
-                estudiante_sin_sala = Estudiante.objects.filter(
-                    nombre__iexact=nombre_ingresado,
-                    apellido__in=('', '1'),
-                    sala__isnull=True,
-                ).first()
-
-            if estudiante_sin_sala:
-                estudiante = estudiante_sin_sala
-                estudiante.sala = sala_encontrada
-                estudiante.apellido = apellido_ingresado
-                estudiante.save(update_fields=['sala', 'apellido'])
-            else:
-                estudiante = Estudiante.objects.create(
-                    nombre=nombre_ingresado,
-                    apellido=apellido_ingresado,
-                    edad=15,
-                    tiempo_viaje='< 15 min',
-                    sala=sala_encontrada
-                )
-        Inscripcion.objects.get_or_create(
-            estudiante=estudiante,
-            sala=sala_encontrada,
-        )
-        request.session['estudiante_id'] = estudiante.id
-        return redirect('usuario')
-
-    estudiante_id = request.session.get('estudiante_id')
-    if not estudiante_id:
-        return render(request, "usuario.html", {'mostrar_login': True})
-
-    estudiante = Estudiante.objects.filter(id=estudiante_id).first()
-    if not estudiante:
-        request.session.flush()
-        return redirect('usuario')
 
     promedio_estudiante = Calificacion.objects.filter(estudiante=estudiante).aggregate(Avg('nota'))['nota__avg'] or 0.0
     materias_inscritas = Calificacion.objects.filter(estudiante=estudiante).values('materia').distinct().count()
@@ -388,7 +344,7 @@ def usuario(request):
         'mostrar_login': False,
         'estudiante': estudiante,
         'kpi_promedio': round(promedio_estudiante, 1),
-        'kpi_materias': materias_inscritas,
+        'kpi_materias': estudiante.cursos.count(),
         'kpi_tareas': tareas_pendientes,
         'g1_labels': g1_labels,
         'g1_data': g1_data,
@@ -399,6 +355,4 @@ def usuario(request):
     context.update(contexto_estudio(estudiante))
     return render(request, "usuario.html", context)
 
-def logout_usuario(request):
-    request.session.flush()
-    return redirect('usuario')
+logout_usuario = salir

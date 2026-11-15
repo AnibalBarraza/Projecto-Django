@@ -1,0 +1,51 @@
+<div class="d-flex flex-wrap gap-3 justify-content-between align-items-center mb-3">
+    <span>
+        Sesión:
+        <strong>
+            {{ request.user.get_full_name|default:request.user.username }}
+        </strong>
+    </span>
+
+    <form method="post" action="{% url 'salir' %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-secondary btn-sm">
+            Cerrar sesión
+        </button>
+    </form>
+</div>
+
+{% if estudiante %}
+<section class="card p-3 mb-4" aria-label="Inscripción a una asignatura">
+    <h5>Inscribirme en una asignatura</h5>
+
+    <form method="post"
+          action="{% url 'inscribirse' %}"
+          class="d-flex flex-wrap gap-2">
+        {% csrf_token %}
+
+        <label for="codigoCurso" class="visually-hidden">
+            Código del curso
+        </label>
+
+        <input
+            id="codigoCurso"
+            name="codigo_sala"
+            class="form-control"
+            style="max-width: 260px;"
+            maxlength="10"
+            placeholder="Código del profesor"
+            required>
+
+        <button class="btn btn-primary">Inscribirme</button>
+    </form>
+
+    <p class="small mt-3 mb-0">
+        Mis cursos:
+        {% for curso in estudiante.cursos.all %}
+            {{ curso.asignatura }}{% if not forloop.last %} · {% endif %}
+        {% empty %}
+            Aún no te has inscrito.
+        {% endfor %}
+    </p>
+</section>
+{% endif %}

@@ -5,7 +5,7 @@ from django.db.models import Sum
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-
+from django.contrib.auth.decorators import login_required
 from .forms import RegistroEstudioForm
 from .models import Estudiante, RegistroEstudio
 
@@ -51,10 +51,11 @@ def contexto_estudio(estudiante):
     }
 
 
+@login_required(login_url="ingresar")
 @require_POST
 def guardar_estudio(request):
     estudiante = Estudiante.objects.filter(
-        id=request.session.get("estudiante_id")
+        usuario=request.user
     ).first()
 
     if not estudiante:
