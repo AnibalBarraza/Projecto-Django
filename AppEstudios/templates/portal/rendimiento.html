@@ -1,0 +1,78 @@
+{% extends "portal/base.html" %}
+{% block content %}
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Tu panorama académico</p>
+      <h1>Rendimiento general</h1>
+      <p class="muted">Explora tus cursos y compara períodos, paso a paso.</p>
+    </div>
+    {% include "portal/componentes/filtro_periodo.html" with mostrar_filtro_periodo=True %}
+  </div>
+  <div class="stats-grid">
+    <article class="card metric">
+      <span class="metric-label">Promedio general</span>
+      <strong class="metric-value">
+        {% if promedio_general != None %}
+          {{ promedio_general|floatformat:2 }}<small>/ 7,0</small>
+        {% else %}
+          <span class="no-data">Sin calificaciones</span>
+        {% endif %}
+      </strong>
+      <span class="metric-foot">Semestre {{ semestre }} · {{ anio }}</span>
+    </article>
+    <article class="card metric">
+      <span class="metric-label">Cursos con notas</span>
+      <strong class="metric-value">{{ cursos_con_notas }}<small>/ {{ total_cursos }}</small>
+      </strong>
+      <span class="metric-foot">Se consideran en el promedio general</span>
+    </article>
+    <article class="card metric">
+      <span class="metric-label">Cálculo del promedio</span>
+      <strong class="metric-value metric-range">Mismo peso</strong>
+      <span class="metric-foot">Cada curso con notas aporta por igual</span>
+    </article>
+  </div>
+  {% include "portal/graficos.html" %}
+  <article class="card notes-register">
+    <div class="panel-heading">
+      <h3>Cursos del período</h3>
+      <span class="muted">Semestre {{ semestre }} · {{ anio }}</span>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Curso</th>
+            <th>Promedio · 1,0–7,0</th>
+            <th>Explorar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fila in filas %}
+            <tr>
+              <td>
+                {{ fila.curso.asignatura }} <span class="muted">{{ fila.curso.seccion }}</span>
+              </td>
+              <td>
+                {% if fila.promedio != None %}
+                  <span class="grade-pill">{{ fila.promedio|floatformat:2 }}</span>
+          {% else %}Sin calificaciones{% endif %}
+            </td>
+            <td>
+              <a
+                href="{% url 'curso_seccion' fila.curso.pk 'calificaciones' %}?semestre={{ semestre }}&anio={{ anio }}"
+              >Ver calificaciones →</a>
+            </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3">Sin cursos inscritos.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+  <p class="context-note">El promedio general es el promedio de los promedios de los cursos con notas del semestre y año seleccionados. Los cursos sin calificaciones se excluyen.{% if profesor %} Cada promedio de curso considera las notas de sus estudiantes.{% endif %}
+  </p>
+{% endblock %}

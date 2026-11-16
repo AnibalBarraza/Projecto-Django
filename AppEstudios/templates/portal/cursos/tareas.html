@@ -1,0 +1,42 @@
+{% if entrega_seleccionada %}
+  <p class="selection"> Entrega seleccionada desde el calendario. <a href="{% url 'curso_seccion' curso.pk 'tareas' %}">Ver todas las tareas del curso</a>
+  </p>
+{% endif %}
+{% if profesor and not curso.archivada %}
+  <article class="card form">
+    <h3>Nueva entrega · {{ curso.asignatura }} {{ curso.seccion }}</h3>
+    <form method="post" action="{% url 'curso_seccion' curso.pk 'tareas' %}">
+      {% csrf_token %}
+      {{ tarea_form.as_p }}<button name="crear_tarea">Publicar tarea</button>
+    </form>
+  </article>
+{% endif %}
+<div class="scroll" id="tabla-tareas">
+  <table>
+    <thead>
+      <tr>
+        <th>Tarea</th>
+        <th>Fecha de entrega</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tarea in entregas %}
+        <tr id="tarea-{{ tarea.pk }}" class="note-detail">
+          <td>{{ tarea.titulo }}{% if not profesor and tarea.estudiante_id %}
+            <small>{% if tarea.completada %}Completada{% else %}Pendiente{% endif %}</small>
+      {% endif %}
+    </td>
+    <td>{{ tarea.fecha_entrega|date:'d/m/Y' }}</td>
+  </tr>
+{% empty %}
+  <tr>
+    <td colspan="2">Sin entregas en este curso.</td>
+  </tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% include "portal/componentes/paginacion.html" with paginacion=paginacion_entregas %}
+<p>
+  <a href="{% url 'calendario' %}?curso={{ curso.pk }}">Abrir calendario de este curso</a>
+</p>

@@ -1,0 +1,28 @@
+<div class="grid">
+  <article class="card">
+    <h3>Promedio del período</h3>
+    <div class="stat">
+      {% if promedio != None %}
+        {{ promedio|floatformat:2 }}{% else %}Sin calificaciones{% endif %}
+    </div>
+    <a
+      href="{% url 'curso_seccion' curso.pk 'calificaciones' %}?semestre={{ semestre }}&anio={{ anio }}"
+    >Ver calificaciones</a>
+  </article>
+  <article class="card">
+    <h3>Entregas del curso</h3>
+    <p>{{ total_entregas }} entregas disponibles</p>
+    <a href="{% url 'curso_seccion' curso.pk 'tareas' %}">Ver tareas y fechas</a>
+  </article>
+  {% if profesor %}
+    <article class="card">
+      <h3>Estudiantes inscritos</h3>
+      <div class="stat">{{ total_alumnos }}</div>
+      <a
+        href="{% url 'curso_seccion' curso.pk 'estudiantes' %}?semestre={{ semestre }}&anio={{ anio }}"
+      >Ver estudiantes</a>
+    </article>
+  {% endif %}
+</div>
+{% include "portal/graficos.html" %}
+<p class="context-note">Los datos ayudan a orientar apoyos. Las asociaciones observadas no prueban causalidad ni predicen automáticamente una reprobación.</p>

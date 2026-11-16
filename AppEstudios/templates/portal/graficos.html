@@ -1,0 +1,80 @@
+{% load l10n %}
+{% if charts %}
+  <div class="charts-grid">
+    {% for chart in charts %}
+      <section
+        class="card interactive-chart {% if chart.type == 'calor' or chart.type == 'linea' and charts|length == 3 %}chart-wide{% endif %}"
+        aria-labelledby="title-{{ chart.id }}"
+        id="{{ chart.id }}-grafico"
+        data-chart="{{ chart.id }}"
+      >
+        <div class="chart-heading">
+          <div>
+            <h3 id="title-{{ chart.id }}">{{ chart.title }}</h3>
+            <p class="chart-meta">{{ chart.period }} · {{ chart.unit }}{% if chart.unit == "nota" %} · escala 1,0–7,0{% endif %}
+            </p>
+          </div>
+          {% if chart.points|length > 1 %}
+            {% if chart.type == "barras" or chart.type == "puntos" and chart.orientacion == "horizontal" %}
+              <label class="chart-order">
+                <span class="sr-only">Ordenar barras</span>
+                <select data-sort aria-label="Orden de {{ chart.title }}">
+                  <option value="original">Orden original</option>
+                  <option value="desc">Mayor a menor</option>
+                  <option value="asc">Menor a mayor</option>
+                </select>
+              </label>
+            {% endif %}
+          {% endif %}
+        </div>
+        {% if chart.points %}
+          <div class="chart-canvas scroll" data-canvas></div>
+          <div class="chart-legend" data-legend></div>
+          <p
+            data-readout
+            class="chart-readout"
+            aria-live="polite"
+          >Selecciona un elemento para explorar el detalle.</p>
+          <details class="chart-table">
+            <summary>Ver datos y enlaces del gráfico</summary>
+            <p class="chart-help">{{ chart.help }}</p>
+            <div class="scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Elemento</th>
+                    <th>{{ chart.unit|capfirst }}</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for point in chart.points %}
+                    <tr>
+                      <td>{{ point.label }}</td>
+                      <td>{{ point.value|floatformat:2 }}</td>
+                      <td>
+                        <a href="{{ point.url }}">Ver detalle de {{ point.label }}</a>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        {% else %}
+          <div class="empty chart-empty">
+            <span aria-hidden="true">∅</span>
+            <strong>Sin datos para este período</strong>
+            <p>Los gráficos aparecerán cuando existan registros.</p>
+          </div>
+        {% endif %}
+        {% if chart.id == "estudiantes" %}
+          {% include "portal/componentes/paginacion.html" with paginacion=paginacion_alumnos %}
+        {% elif chart.id == "notas" %}
+          {% include "portal/componentes/paginacion.html" with paginacion=paginacion_notas %}
+        {% endif %}
+        {{ chart|json_script:chart.id }}
+      </section>
+    {% endfor %}
+  </div>
+{% endif %}

@@ -1,0 +1,14 @@
+{% extends "portal/base.html" %}
+{% block content %}
+  <a class="back-link" href="{% url 'tablero' %}">← Volver a mis asignaturas</a>
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Un nuevo espacio para aprender</p>
+      <h1>Crear curso o sección</h1>
+      <p class="muted">Cada sección tendrá su propio código y período académico.</p>
+    </div>
+  </div>
+  <section class="card form">
+    {% include "portal/componentes/formulario_curso.html" %}
+  </section>
+{% endblock %}

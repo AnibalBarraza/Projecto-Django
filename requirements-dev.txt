@@ -1,0 +1,6 @@
+# Optional tooling, separate from production dependencies.
+playwright==1.65.2
+
+# Source formatters (optional).
+black==26.10.1
+djlint==1.50.4

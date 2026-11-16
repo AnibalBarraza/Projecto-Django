@@ -1,0 +1,33 @@
+{% include "portal/graficos.html" %}
+<p>Minutos registrados en este curso del {{ lunes|date:'d/m/Y' }} al {{ hoy|date:'d/m/Y' }}. El estudio general y otros cursos no se incluyen.</p>
+<div class="scroll" id="tabla-habitos">
+  <table>
+    <thead>
+      <tr>
+        <th>Estudiante</th>
+        <th>Minutos esta semana</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in habitos %}
+        <tr id="habito-{{ fila.alumno.pk }}" class="note-detail">
+          <td>
+            <a
+              href="{% url 'ficha_estudiante' curso.pk fila.alumno.pk %}?semestre={{ semestre }}&anio={{ anio }}"
+            >{{ fila.alumno.nombre }} {{ fila.alumno.apellido }}</a>
+          </td>
+          <td>
+            {% if fila.minutos != None %}
+              {{ fila.minutos }} min{% else %}Sin registros{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="2">Aún no hay estudiantes.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "portal/componentes/paginacion.html" with paginacion=paginacion_habitos %}
+<p class="muted">Las notas no tienen fecha de evaluación suficiente para compararlas con esta semana de estudio. No se calcula una correlación ni una predicción de reprobación.</p>

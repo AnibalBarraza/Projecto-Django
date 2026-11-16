@@ -1,0 +1,23 @@
+{% if mostrar_filtro_periodo or seccion == "resumen" or seccion == "calificaciones" or seccion == "estudiantes" %}
+  <form class="period-filter" method="get" aria-label="Período académico">
+    <div>
+      <label for="semestre">Semestre</label>
+      <select id="semestre" name="semestre">
+        <option value="1" {% if semestre == 1 %}selected{% endif %}>Primero</option>
+        <option value="2" {% if semestre == 2 %}selected{% endif %}>Segundo</option>
+      </select>
+    </div>
+    <div>
+      <label for="anio">Año</label>
+      <input
+        id="anio"
+        type="number"
+        name="anio"
+        min="1900"
+        max="2200"
+        value="{{ anio }}"
+      >
+    </div>
+    <button class="secondary">Aplicar</button>
+  </form>
+{% endif %}

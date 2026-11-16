@@ -1,0 +1,39 @@
+<article class="card">
+  <h3>Inscripción y período académico</h3>
+  <p>
+    Código: <strong class="code">{{ curso.codigo }}</strong>
+  </p>
+  <p>Primer período: semestre {{ curso.semestre_inicio }} · {{ curso.anio_inicio }}.</p>
+  <p>Período actual: semestre {{ curso.semestre_actual }} · {{ curso.anio_actual }}.</p>
+  <h3>Historial de calificaciones</h3>
+  {% for s, a in periodos %}
+    <p>
+      <a
+        href="{% url 'curso_seccion' curso.pk 'calificaciones' %}?semestre={{ s }}&anio={{ a }}"
+      >Semestre {{ s }} · {{ a }}</a>
+    </p>
+  {% endfor %}
+  <p>También puedes consultar cualquier semestre y año desde Calificaciones.</p>
+</article>
+{% if not curso.archivada %}
+  <article class="card form">
+    <h3>Cerrar semestre actual</h3>
+    <p>Avanza al siguiente semestre sin borrar notas, tareas ni inscripciones. Escribe SI para confirmar.</p>
+    <form
+      method="post"
+      action="{% url 'curso_seccion' curso.pk 'configuracion' %}"
+    >
+      {% csrf_token %}
+      <input
+        type="hidden"
+        name="periodo_actual"
+        value="{{ curso.semestre_actual }}-{{ curso.anio_actual }}"
+      >
+      <p>
+        <label for="confirmacion">Confirmación para {{ curso.asignatura }} {{ curso.seccion }}</label>
+        <input id="confirmacion" name="confirmacion" required>
+      </p>
+      <button name="terminar_semestre">Cerrar semestre</button>
+    </form>
+  </article>
+{% endif %}

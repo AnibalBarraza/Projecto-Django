@@ -1,0 +1,11 @@
+{% if paginacion.pagina.paginator.num_pages > 1 %}
+  <nav class="pagination" aria-label="Páginas de resultados">
+    {% if paginacion.anterior %}
+      <a href="{{ paginacion.anterior }}">← Anterior</a>
+    {% endif %}
+    <span>Página {{ paginacion.pagina.number }} de {{ paginacion.pagina.paginator.num_pages }} · {{ paginacion.pagina.paginator.count }} registros</span>
+    {% if paginacion.siguiente %}
+      <a href="{{ paginacion.siguiente }}">Siguiente →</a>
+    {% endif %}
+  </nav>
+{% endif %}

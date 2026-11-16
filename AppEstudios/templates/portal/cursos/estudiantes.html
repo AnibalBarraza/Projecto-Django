@@ -1,0 +1,22 @@
+{% if ficha %}
+  {% include "portal/cursos/calificaciones.html" %}
+{% else %}
+  {% if filtro_estudiantes %}
+    <p class="selection">{{ filtro_estudiantes }} <a href="{% url 'curso_seccion' curso.pk 'estudiantes' %}">Ver todos</a>
+    </p>
+  {% endif %}
+  <article class="card" id="lista-estudiantes">
+    <ul>
+      {% for alumno in alumnos %}
+        <li>
+          <a
+            href="{% url 'ficha_estudiante' curso.pk alumno.pk %}?semestre={{ semestre }}&anio={{ anio }}"
+          >{{ alumno.nombre }} {{ alumno.apellido }}</a>
+        </li>
+      {% empty %}
+        <li>Aún no hay estudiantes inscritos.</li>
+      {% endfor %}
+    </ul>
+    {% include "portal/componentes/paginacion.html" with paginacion=paginacion_alumnos %}
+  </article>
+{% endif %}

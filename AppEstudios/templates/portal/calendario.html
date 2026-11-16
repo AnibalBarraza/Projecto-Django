@@ -1,0 +1,75 @@
+{% extends "portal/base.html" %}
+{% block content %}
+  <h1>Calendario de entregas</h1>
+  <p>Consulta las entregas de tus cursos. Cada curso conserva su color en el tablero y el calendario.</p>
+  <form method="get" class="inline">
+    <input type="hidden" name="mes" value="{{ inicio.month }}">
+    <input type="hidden" name="anio" value="{{ inicio.year }}">
+    <div>
+      <label for="curso">Filtrar por curso</label>
+      <select name="curso" id="curso">
+        <option value="">Todos mis cursos</option>
+        {% for curso in cursos %}
+          <option
+            value="{{ curso.pk }}"
+            {% if filtro == curso.pk|stringformat:'s' %}selected{% endif %}
+          >{{ curso.asignatura }} {{ curso.seccion }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button>Filtrar</button>
+  </form>
+  <div class="inline">
+    <a
+      href="?mes={{ anterior.month }}&anio={{ anterior.year }}&curso={{ filtro }}"
+    >← Mes anterior</a>
+    <h2>{{ inicio|date:'F Y'|capfirst }}</h2>
+    <a
+      href="?mes={{ siguiente.month }}&anio={{ siguiente.year }}&curso={{ filtro }}"
+    >Mes siguiente →</a>
+  </div>
+  <div class="calendar" aria-label="Calendario mensual">
+    <div class="weekday">Lun</div>
+    <div class="weekday">Mar</div>
+    <div class="weekday">Mié</div>
+    <div class="weekday">Jue</div>
+    <div class="weekday">Vie</div>
+    <div class="weekday">Sáb</div>
+    <div class="weekday">Dom</div>
+    {% for semana in semanas %}
+      {% for dia in semana %}
+        <div class="day {% if not dia.actual %}other{% endif %}">
+          <time datetime="{{ dia.fecha|date:'Y-m-d' }}">{{ dia.fecha.day }}</time>
+          {% for evento in dia.eventos %}
+            <a
+              class="event"
+              style="--course:{{ evento.color }}"
+              href="{% url 'curso_seccion' evento.tarea.sala_id 'tareas' %}?entrega={{ evento.tarea.pk }}#tarea-{{ evento.tarea.pk }}"
+            >{{ evento.tarea.titulo }}<small>{{ evento.tarea.sala.asignatura }} {{ evento.tarea.sala.seccion }}</small>
+            </a>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+  <div class="agenda">
+    {% for dia in agenda %}
+      <article class="card">
+        <h3>{{ dia.fecha|date:'l d/m/Y' }}</h3>
+        {% for evento in dia.eventos %}
+          <a
+            class="event"
+            style="--course:{{ evento.color }}"
+            href="{% url 'curso_seccion' evento.tarea.sala_id 'tareas' %}?entrega={{ evento.tarea.pk }}#tarea-{{ evento.tarea.pk }}"
+          >{{ evento.tarea.titulo }}<small>{{ evento.tarea.sala.asignatura }} {{ evento.tarea.sala.seccion }}</small>
+          </a>
+        {% endfor %}
+      </article>
+    {% empty %}
+      <p class="empty">Sin entregas este mes.</p>
+    {% endfor %}
+  </div>
+  {% if not agenda %}
+    <p>Sin entregas este mes para el filtro seleccionado.</p>
+  {% endif %}
+{% endblock %}
