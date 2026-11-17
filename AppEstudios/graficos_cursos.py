@@ -6,9 +6,13 @@ from django.urls import reverse
 
 from .graficos import grafico, punto
 from .presentacion import color
+from .exploracion import enlace_ficha, graficos_exploracion
 
 
-def graficos_curso(curso, seccion, profesor, ficha, semestre, anio, datos):
+def graficos_curso(
+    curso, seccion, profesor, ficha, semestre, anio, datos, parametros=None
+):
+    parametros = parametros or {}
     query = urlencode({"semestre": semestre, "anio": anio})
     url_notas = (
         reverse("curso_seccion", args=[curso.pk, "calificaciones"]) + "?" + query
@@ -50,9 +54,7 @@ def graficos_curso(curso, seccion, profesor, ficha, semestre, anio, datos):
                     punto(
                         f"{a.nombre} {a.apellido}",
                         datos["promedios"][a.pk],
-                        reverse("ficha_estudiante", args=[curso.pk, a.pk])
-                        + "?"
-                        + query,
+                        enlace_ficha(curso, a, semestre, anio, parametros),
                         color(curso),
                     )
                     for a in datos["alumnos_grafico"]
@@ -73,7 +75,7 @@ def graficos_curso(curso, seccion, profesor, ficha, semestre, anio, datos):
                 "nota",
                 [
                     punto(
-                        f"Nota {datos['inicio_notas'] + i + 1}",
+                        n.get_tipo_evaluacion_display() if n.tipo_evaluacion else f"Nota {datos['inicio_notas'] + i + 1}",
                         n.nota,
                         "#detalle-" + str(n.pk),
                         color(curso),
@@ -112,7 +114,17 @@ def graficos_curso(curso, seccion, profesor, ficha, semestre, anio, datos):
                             )
                         )
                         + "?"
-                        + urlencode({"semestre": e["semestre"], "anio": e["anio"]}),
+                        + urlencode(
+                            {
+                                "semestre": e["semestre"],
+                                "anio": e["anio"],
+                                **(
+                                    {"volver": parametros["volver"]}
+                                    if "volver" in parametros
+                                    else {}
+                                ),
+                            }
+                        ),
                         color(curso),
                     )
                     for e in evolucion
@@ -181,4 +193,17 @@ def graficos_curso(curso, seccion, profesor, ficha, semestre, anio, datos):
                 ayuda="Selecciona un tramo para explorar sus estudiantes. No se infiere que el viaje cause un resultado académico.",
             )
         )
-    return {"charts": charts, "url_notas": url_notas}
+    if profesor and (seccion == "calificaciones" or ficha is not None):
+        charts.extend(
+            graficos_exploracion(curso, datos, ficha, semestre, anio, parametros)
+        )
+    if profesor and ficha is None:
+        charts.sort(key=lambda c: c["id"] == "historia-curso")
+    return {
+        "charts": charts,
+        "charts_principales": [
+            c for c in charts if c["id"] not in ("edades", "viajes")
+        ],
+        "charts_contexto": [c for c in charts if c["id"] in ("edades", "viajes")],
+        "url_notas": url_notas,
+    }

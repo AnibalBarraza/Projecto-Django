@@ -193,6 +193,13 @@ class PaginacionTests(PortalTestCase):
         )
         self.assertEqual(len(respuesta.context["charts"][1]["points"]), 4)
         self.assertEqual(respuesta.context["charts"][0]["points"][4]["value"], 34)
+        charts = {c["id"]: c for c in respuesta.context["charts"]}
+        self.assertEqual(len(charts["historia-estudiantes"]["rows"]), 4)
+        self.assertEqual(len(charts["promedio-cantidad"]["points"]), 4)
+        self.assertEqual(
+            {p["url"] for p in charts["estudiantes"]["points"]},
+            {p["url"] for p in charts["promedio-cantidad"]["points"]},
+        )
         anterior = respuesta.context["paginacion_alumnos"]["anterior"]
         self.assertIn("rango=2", anterior)
         self.assertIn("semestre=2", anterior)

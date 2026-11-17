@@ -1668,3 +1668,32 @@ progress {
         font-size: 10px;
     }
 }
+
+/* Lista de estudiantes del curso */
+.students-card { padding: 0; overflow: hidden; }
+.students-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 20px 22px 12px; }
+.students-heading strong { color: #29364b; font-size: 15px; }
+.students-heading .muted { font-size: 12px; }
+.students-table { font-size: 14px; }
+.students-table caption { padding: 0 22px 18px; font-size: 12px; }
+.students-table th { font-size: 11px; padding: 14px 22px; white-space: nowrap; }
+.students-table td { padding: 17px 22px; }
+.students-table tbody tr:hover { background: #fafaff; }
+.student-profile { color: #6455d9; text-decoration: none; white-space: nowrap; }
+.student-profile:hover { text-decoration: underline; }
+.student-profile:focus-visible { outline: 2px solid #7864ed; outline-offset: 5px; }
+.student-name { color: #29364b; font-weight: 600; }
+.student-average { display: inline-block; padding: 5px 10px; border-radius: 8px; background: #efedf9; color: #6254bc; font-weight: 700; font-variant-numeric: tabular-nums; }
+.student-scale { color: #8993a7; font-size: 11px; white-space: nowrap; }
+.students-table .students-empty { padding: 32px 22px; text-align: center; color: #8993a7; }
+@media (max-width: 600px) {
+    .students-table th, .students-table td { padding: 13px 12px; }
+    .student-scale { display: block; margin-top: 4px; }
+}
+
+.interactive-chart[data-chart="historia-estudiantes"] .chart-svg { min-width: 620px; }
+main[aria-busy="true"] .charts-grid { opacity: .65; }
+.course-context { margin-top: 20px; }
+.course-context > summary { cursor: pointer; color: #66738b; font-size: 13px; padding: 14px 0; }
+.interactive-chart[data-chart="historia-estudiantes"] .chart-canvas,
+.interactive-chart[data-chart="cambio-promedios"] .chart-canvas { max-height: 430px; }

@@ -1,6 +1,7 @@
 ﻿"""Gráficos con significado, períodos correctos y destinos autorizados."""
 
 from datetime import timedelta
+from urllib.parse import parse_qs, urlsplit
 from django.urls import reverse
 from django.utils import timezone
 from ..models import Inscripcion, RegistroEstudio
@@ -8,6 +9,102 @@ from .base import PortalTestCase
 
 
 class GraficosTests(PortalTestCase):
+    def test_exploration_history_is_limited_and_queries_are_batched(self):
+        from ..consultas.exploracion import historia_exploracion
+
+        for year in range(2015, 2027):
+            self.nota(self.a, 5, semestre=1, anio=year)
+            self.nota(self.a, 6, semestre=2, anio=year)
+        self.nota(self.a, 7, anio=2027)
+        with self.assertNumQueries(2):
+            history = historia_exploracion(self.a, [self.est, self.est2], 2, 2026)
+        self.assertEqual(len(history["periodos"]), 8)
+        self.assertEqual(history["periodos"][-1], (2026, 2))
+        self.assertEqual(history["previo"], (2026, 1))
+        self.assertEqual(len(history["valores"]), 8)
+
+    def test_exploration_scopes_history_and_distinguishes_missing_grades(self):
+        Inscripcion.objects.create(estudiante=self.est2, sala=self.a)
+        self.nota(self.a, 3, semestre=1)
+        self.nota(self.a, 5)
+        self.nota(self.a, 7)
+        self.nota(self.b, 1)
+        self.nota(self.a, 1, anio=2027)
+        self.login(self.prof)
+        response = self.client.get(
+            self.url(self.a, "calificaciones"), {"semestre": 2, "anio": 2026}
+        )
+        charts = {c["id"]: c for c in response.context["charts"]}
+        matrix = charts["historia-estudiantes"]
+        self.assertEqual(matrix["columns"], ["S1 · 2026", "S2 · 2026"])
+        self.assertEqual([p["value"] for p in matrix["points"]], [3, 6, 0, 0])
+        self.assertEqual(
+            [p["missing"] for p in matrix["points"]], [False, False, True, True]
+        )
+        scatter = charts["promedio-cantidad"]["points"]
+        self.assertEqual([(p["x"], p["value"]) for p in scatter], [(2, 6)])
+        changes = charts["cambio-promedios"]["points"]
+        self.assertEqual(
+            [(p["before"], p["after"], p["value"]) for p in changes], [(3, 6, 3)]
+        )
+        missing = self.client.get(matrix["points"][-1]["url"])
+        self.assertEqual(missing.status_code, 200)
+        self.assertIsNone(missing.context["promedio"])
+
+    def test_filtered_chart_links_return_to_same_range_and_page(self):
+        self.nota(self.a, 3, semestre=1)
+        self.nota(self.a, 5)
+        self.login(self.prof)
+        query = {"semestre": 2, "anio": 2026, "banda": 4, "pagina_estudiantes": 1}
+        response = self.client.get(self.url(self.a, "calificaciones"), query)
+        charts = {c["id"]: c for c in response.context["charts"]}
+        for chart_id in (
+            "estudiantes",
+            "historia-estudiantes",
+            "promedio-cantidad",
+            "cambio-promedios",
+        ):
+            ficha = self.client.get(charts[chart_id]["points"][-1]["url"])
+            self.assertEqual(ficha.status_code, 200)
+            back = ficha.context["url_volver"]
+            self.assertEqual(
+                parse_qs(urlsplit(back).query), {k: [str(v)] for k, v in query.items()}
+            )
+            history = next(
+                c for c in ficha.context["charts"] if c["id"] == "historia-curso"
+            )
+            previous = self.client.get(history["points"][0]["url"])
+            self.assertEqual(previous.context["url_volver"], back)
+
+    def test_comparison_excludes_students_without_both_periods(self):
+        Inscripcion.objects.create(estudiante=self.est2, sala=self.a)
+        self.nota(self.a, 6, semestre=1)
+        self.nota(self.a, 4)
+        self.nota(self.a, 7, estudiante=self.est2)
+        self.login(self.prof)
+        response = self.client.get(self.url(self.a, "calificaciones"))
+        changes = next(
+            c for c in response.context["charts"] if c["id"] == "cambio-promedios"
+        )
+        self.assertEqual([p["value"] for p in changes["points"]], [-2])
+        self.login()
+        response = self.client.get(self.url(self.a, "calificaciones"))
+        self.assertFalse(
+            {"historia-estudiantes", "promedio-cantidad", "cambio-promedios"}
+            & {c["id"] for c in response.context["charts"]}
+        )
+
+    def test_return_link_cannot_redirect_outside_course(self):
+        self.login(self.prof)
+        response = self.client.get(
+            reverse("ficha_estudiante", args=[self.a.pk, self.est.pk]),
+            {"volver": "next=https://example.com&semestre=1&anio=2026&curso=999"},
+        )
+        back = urlsplit(response.context["url_volver"])
+        self.assertFalse(back.netloc)
+        self.assertEqual(back.path, self.url(self.a, "calificaciones"))
+        self.assertEqual(parse_qs(back.query), {"semestre": ["1"], "anio": ["2026"]})
+
     def test_histograma_cuenta_promedios_en_seis_intervalos_iguales(self):
         Inscripcion.objects.create(estudiante=self.est2, sala=self.a)
         self.nota(self.a, 1)
@@ -95,11 +192,12 @@ class GraficosTests(PortalTestCase):
         self.assertEqual(anillo["type"], "anillo")
         self.assertEqual(anillo["unit"], "minutos")
         self.assertEqual(sum(p["value"] for p in anillo["points"]), 100)
+        self.assertEqual(
+            [p["url"] for p in anillo["points"]],
+            [self.url(self.a, "calificaciones"), self.url(self.b, "calificaciones"), reverse("rendimiento")],
+        )
         for punto in anillo["points"]:
-            filtrada = self.client.get(reverse("estudio") + punto["url"])
-            self.assertEqual(
-                sum(r.minutos for r in filtrada.context["historial"]), punto["value"]
-            )
+            self.assertEqual(self.client.get(punto["url"]).status_code, 200)
 
     def test_mapa_de_calor_no_mezcla_usuarios_ni_inventa_dias_futuros(self):
         hoy = timezone.localdate()

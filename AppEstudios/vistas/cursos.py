@@ -9,6 +9,7 @@ from ..acceso import cursos_usuario, perfil, profesor_request
 from ..consultas.cursos import datos_curso
 from ..forms import CursoForm, NotaForm, TareaForm
 from ..graficos_cursos import graficos_curso
+from ..exploracion import contexto_exploracion
 from ..models import Estudiante
 from ..periodos import periodo
 from ..presentacion import SECCIONES, color, contexto
@@ -140,7 +141,10 @@ def curso(request, curso_id, seccion="resumen", estudiante_id=None):
             **contexto(request, "tablero"),
             **datos,
             **formularios,
-            **graficos_curso(sala, seccion, profesor, ficha, semestre, anio, datos),
+            **graficos_curso(
+                sala, seccion, profesor, ficha, semestre, anio, datos, request.GET
+            ),
+            **contexto_exploracion(sala, ficha, semestre, anio, request.GET),
             "curso": sala,
             "color": color(sala),
             "seccion": seccion,

@@ -100,7 +100,14 @@ def graficos_estudio(avance):
             "Semana actual",
             "minutos",
             [
-                punto(nombres[k], v, "?curso=" + k + "#historial", colores[k])
+                punto(
+                    nombres[k],
+                    v,
+                    reverse("rendimiento")
+                    if k == "general"
+                    else reverse("curso_seccion", args=[int(k), "calificaciones"]),
+                    colores[k],
+                )
                 for k, v in por_curso.items()
             ],
             tipo=(
@@ -108,7 +115,7 @@ def graficos_estudio(avance):
                 if len(por_curso) > 1 and sum(por_curso.values()) > 0
                 else "barras"
             ),
-            ayuda="Selecciona un curso o Estudio general para consultar su historial. Cada registro se suma una vez.",
+            ayuda="Selecciona un curso para ver sus calificaciones o Estudio general para ver tu rendimiento general. Cada registro se suma una vez.",
         ),
     ]
     por_fecha = defaultdict(int)

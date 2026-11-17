@@ -9,6 +9,28 @@ from .base import PortalTestCase
 
 
 class CursosTests(PortalTestCase):
+    def test_students_averages_are_scoped_to_course_and_period(self):
+        from ..models import Inscripcion
+
+        Inscripcion.objects.create(estudiante=self.est2, sala=self.a)
+        self.nota(self.a, 4)
+        self.nota(self.a, 6)
+        self.nota(self.a, 1, semestre=1)
+        self.nota(self.a, 2, anio=2025)
+        self.nota(self.b, 7)
+        self.login(self.prof)
+        response = self.client.get(
+            self.url(self.a, "estudiantes"), {"semestre": 2, "anio": 2026}
+        )
+        self.assertEqual(response.status_code, 200)
+        alumnos = {a.pk: a for a in response.context["alumnos"]}
+        self.assertEqual(alumnos[self.est.pk].promedio_periodo, 5)
+        self.assertEqual(alumnos[self.est.pk].cantidad_notas, 2)
+        self.assertIsNone(alumnos[self.est2.pk].promedio_periodo)
+        self.assertEqual(alumnos[self.est2.pk].cantidad_notas, 0)
+        self.assertContains(response, "Sin notas")
+        self.assertContains(response, "student-profile")
+
     def test_board_has_enrolled_courses_without_grades(self):
         self.login()
         response = self.client.get(reverse("tablero"))
@@ -69,7 +91,7 @@ class CursosTests(PortalTestCase):
                 self.assertEqual(
                     self.client.post(
                         self.url(self.c, section),
-                        {"crear_nota": "", "nota": 7, "estudiante": self.est.pk},
+                        {"crear_nota": "", "tipo_evaluacion": "certamen_1", "nota": 7, "estudiante": self.est.pk},
                     ).status_code,
                     404,
                 )
@@ -84,7 +106,7 @@ class CursosTests(PortalTestCase):
         self.assertEqual(
             self.client.post(
                 self.url(self.a, "calificaciones"),
-                {"crear_nota": "", "estudiante": self.est.pk, "nota": 7},
+                {"crear_nota": "", "tipo_evaluacion": "certamen_1", "estudiante": self.est.pk, "nota": 7},
             ).status_code,
             403,
         )
@@ -95,12 +117,12 @@ class CursosTests(PortalTestCase):
         for valor in ["0.9", "7.1", "NaN", "Infinity", "texto"]:
             response = self.client.post(
                 self.url(self.a, "calificaciones"),
-                {"crear_nota": "", "estudiante": self.est.pk, "nota": valor},
+                {"crear_nota": "", "tipo_evaluacion": "certamen_1", "estudiante": self.est.pk, "nota": valor},
             )
             self.assertTrue(response.context["nota_form"].errors)
         self.client.post(
             self.url(self.a, "calificaciones"),
-            {"crear_nota": "", "estudiante": self.est2.pk, "nota": 6},
+            {"crear_nota": "", "tipo_evaluacion": "certamen_1", "estudiante": self.est2.pk, "nota": 6},
         )
         self.assertFalse(Calificacion.objects.exists())
 
@@ -115,7 +137,7 @@ class CursosTests(PortalTestCase):
             self.client.post(
                 self.url(curso, "calificaciones"),
                 {
-                    "crear_nota": "",
+                    "crear_nota": "", "tipo_evaluacion": "certamen_1",
                     "estudiante": self.est.pk,
                     "nota": "6,5",
                     "materia": "Falsa",
@@ -233,12 +255,34 @@ class CursosTests(PortalTestCase):
         for nota in ["1,0", "7,0"]:
             response = self.client.post(
                 self.url(self.a, "calificaciones"),
-                {"crear_nota": "", "estudiante": self.est.pk, "nota": nota},
+                {"crear_nota": "", "tipo_evaluacion": "certamen_1", "estudiante": self.est.pk, "nota": nota},
             )
             self.assertEqual(response.status_code, 302)
         self.assertEqual(
             set(self.a.calificaciones.values_list("nota", flat=True)), {1.0, 7.0}
         )
+
+    def test_evaluation_is_selected_and_saved(self):
+        self.login(self.prof)
+        for tipo in ["certamen_1", "certamen_2", "control"]:
+            response = self.client.post(self.url(self.a, "calificaciones"), {
+                "crear_nota": "", "estudiante": self.est.pk,
+                "nota": "5,5", "tipo_evaluacion": tipo,
+            })
+            self.assertEqual(response.status_code, 302)
+            self.assertTrue(self.a.calificaciones.filter(tipo_evaluacion=tipo).exists())
+        for tipo in ["", "Evaluación inventada"]:
+            response = self.client.post(self.url(self.a, "calificaciones"), {
+                "crear_nota": "", "estudiante": self.est.pk,
+                "nota": "5,5", "tipo_evaluacion": tipo,
+            })
+            self.assertIn("tipo_evaluacion", response.context["nota_form"].errors)
+        self.assertEqual(self.a.calificaciones.count(), 3)
+        self.login()
+        response = self.client.get(self.url(self.a, "calificaciones"))
+        self.assertContains(response, "Certamen 1")
+        self.assertContains(response, "Certamen 2")
+        self.assertContains(response, "Control")
 
     def test_close_first_semester(self):
         self.login(self.prof)

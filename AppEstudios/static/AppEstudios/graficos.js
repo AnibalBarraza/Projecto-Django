@@ -27,7 +27,8 @@
   addEventListener('hashchange', () => reveal(location.hash));
   reveal(location.hash);
 
-  document.querySelectorAll('.interactive-chart').forEach(section => {
+  function initCharts(root = document) {
+  root.querySelectorAll('.interactive-chart').forEach(section => {
     const data = JSON.parse(section.querySelector('script[type="application/json"]').textContent);
     if (!data.points.length) return;
     const canvas = section.querySelector('[data-canvas]');
@@ -36,9 +37,9 @@
     function draw() {
       const points = data.points.slice();
       if (sort && sort.value !== 'original') points.sort((a, b) => sort.value === 'asc' ? a.value - b.value : b.value - a.value);
-      const width = Math.max(290, canvas.clientWidth);
+      const width = Math.max(data.type === 'matriz' ? 620 : 290, canvas.clientWidth);
       const horizontal = data.type === 'barras' || (data.type === 'puntos' && data.orientacion !== 'vertical');
-      const height = horizontal ? Math.max(180, points.length * 34 + 55) : data.type === 'calor' ? 250 : 290;
+      const height = data.type === 'matriz' ? data.rows.length * 38 + 90 : data.type === 'cambios' ? Math.max(180, points.length * 38 + 65) : horizontal ? Math.max(180, points.length * 34 + 55) : data.type === 'calor' ? 250 : 290;
       const svg = element('svg', {viewBox: `0 0 ${width} ${height}`, role: 'group', 'aria-label': `${data.title}. ${data.period}. ${data.unit}.`, class: 'chart-svg'});
       svg.append(element('title', {}, data.title));
       const minimum = data.unit === 'nota' && data.type !== 'barras' ? 1 : 0;
@@ -46,13 +47,13 @@
       const ticks = data.unit === 'nota' ? (width < 450 ? [minimum, 4, 7] : [minimum, 2, 3, 4, 5, 6, 7]) : Array.from({length: 5}, (_, i) => maximum * i / 4);
       const label = (x, y, text, extra = {}) => element('text', {x, y, class: 'axis-label', ...extra}, text);
       function mark(point) {
-        const description = `${point.label}: ${format(point.value)} ${data.unit}. Ver detalle.`;
+        const description = `${point.label}: ${point.missing ? 'Sin notas' : format(point.value) + ' ' + data.unit}. ${point.detail || ''} Ver detalle.`;
         const link = element('a', {href: point.url, tabindex: 0, class: 'chart-mark', 'aria-label': description});
         link.append(element('title', {}, description));
         for (const event of ['pointerenter', 'focus']) link.addEventListener(event, () => {readout.textContent = description;});
         link.addEventListener('click', () => {if (point.url.startsWith('#')) reveal(point.url);});
         link.addEventListener('keydown', event => {
-          if (event.key === ' ') {event.preventDefault(); reveal(point.url); location.href = point.url;}
+          if (event.key === ' ') {event.preventDefault(); link.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));}
         });
         return link;
       }
@@ -148,7 +149,58 @@
         for (let i = 0; i < 5; i++) svg.append(element('rect', {x: left + 48 + i * 20, y: 204, width: 15, height: 15, rx: 3, fill: '#635bff', 'fill-opacity': .12 + i * .22}));
         svg.append(label(left + 155, 218, 'Más minutos registrados', {}));
       }
+      function matrixChart() {
+        const left = 175, top = 35, cell = (width - left - 15) / data.columns.length;
+        data.columns.forEach((text, i) => svg.append(label(left + cell * (i + .5), 18, text, {'text-anchor': 'middle'})));
+        data.rows.forEach((text, i) => svg.append(label(left - 10, top + i * 38 + 22, text.length > 24 ? text.slice(0, 23) + '…' : text, {'text-anchor': 'end'})));
+        points.forEach(point => {
+          const a = mark(point), x = left + point.column * cell, y = top + point.row * 38;
+          a.append(element('rect', {x, y, width: cell - 4, height: 33, rx: 5, fill: point.missing ? '#edf0f7' : point.color, 'fill-opacity': point.missing ? 1 : .15 + .85 * (point.value - 1) / 6, class: 'data-shape'}));
+          a.append(label(x + (cell - 4) / 2, y + 22, point.display, {'text-anchor': 'middle', style: !point.missing && point.value > 5 ? 'fill:white' : 'fill:#3f4361'}));
+          svg.append(a);
+        });
+        svg.append(label(left, height - 15, 'Claro: 1,0 · Oscuro: 7,0 · —: sin notas. Selecciona una celda para ver la ficha.'));
+      }
+      function scatterChart() {
+        const left = 45, right = width - 25, top = 20, bottom = height - 55;
+        const maxX = Math.max(1, ...points.map(p => p.x));
+        const x = v => left + (right - left) * v / maxX;
+        const y = v => bottom - (bottom - top) * (v - 1) / 6;
+        [1, 4, 7].forEach(v => {
+          svg.append(element('line', {x1: left, x2: right, y1: y(v), y2: y(v), class: v === 4 ? 'reference-line' : 'grid-line'}));
+          svg.append(label(left - 10, y(v) + 4, format(v), {'text-anchor': 'end'}));
+        });
+        [...new Set([0, Math.round(maxX / 2), maxX])].forEach(v => svg.append(label(x(v), bottom + 20, format(v), {'text-anchor': 'middle'})));
+        points.forEach(point => {
+          const a = mark(point);
+          a.append(element('circle', {cx: x(point.x), cy: y(point.value), r: 12, fill: 'transparent'}));
+          a.append(element('circle', {cx: x(point.x), cy: y(point.value), r: 7, fill: point.color, 'fill-opacity': .65, stroke: 'white', 'stroke-width': 1, class: 'data-shape'}));
+          svg.append(a);
+        });
+        svg.append(label(left, 12, 'Promedio'));
+        svg.append(label(right, height - 8, 'Cantidad de notas', {'text-anchor': 'end'}));
+      }
+      function changesChart() {
+        const left = Math.min(175, width * .4), right = width - 35, bottom = height - 35;
+        const x = v => left + (right - left) * (v + 6) / 12;
+        [-6, -3, 0, 3, 6].forEach(v => {
+          svg.append(element('line', {x1: x(v), x2: x(v), y1: 10, y2: bottom, class: v === 0 ? 'reference-line' : 'grid-line'}));
+          svg.append(label(x(v), bottom + 20, v > 0 ? '+' + v : String(v), {'text-anchor': 'middle'}));
+        });
+        points.forEach((point, i) => {
+          const y = 25 + i * 38, a = mark(point);
+          a.append(element('rect', {x: 0, y: y - 15, width, height: 34, fill: 'transparent'}));
+          a.append(label(left - 10, y + 4, point.label.length > 22 ? point.label.slice(0, 21) + '…' : point.label, {'text-anchor': 'end'}));
+          a.append(element('line', {x1: x(0), x2: x(point.value), y1: y, y2: y, stroke: point.color, 'stroke-width': 6, 'stroke-opacity': .35}));
+          a.append(element('circle', {cx: x(point.value), cy: y, r: 6, fill: point.color, class: 'data-shape'}));
+          a.append(label(x(point.value), y - 10, (point.value > 0 ? '+' : '') + format(point.value), {'text-anchor': 'middle'}));
+          svg.append(a);
+        });
+      }
       if (horizontal) horizontalChart();
+      else if (data.type === 'matriz') matrixChart();
+      else if (data.type === 'dispersion') scatterChart();
+      else if (data.type === 'cambios') changesChart();
       else if (data.type === 'anillo') donutChart();
       else if (data.type === 'calor') heatmapChart();
       else verticalChart();
@@ -169,7 +221,48 @@
     }
     if (sort) sort.addEventListener('change', draw);
     let lastWidth = canvas.clientWidth;
-    new ResizeObserver(() => {if (canvas.clientWidth !== lastWidth) {lastWidth = canvas.clientWidth; draw();}}).observe(canvas);
+    section.chartResizeObserver = new ResizeObserver(() => {if (canvas.clientWidth !== lastWidth) {lastWidth = canvas.clientWidth; draw();}});
+    section.chartResizeObserver.observe(canvas);
     draw();
   });
+  }
+  initCharts();
+
+  // Keep range exploration in place; links remain functional without JavaScript.
+  let pending;
+  async function navigateRange(url, push = true) {
+    pending?.abort();
+    const controller = new AbortController();
+    pending = controller;
+    const main = document.querySelector('main');
+    main.setAttribute('aria-busy', 'true');
+    try {
+      const response = await fetch(url, {signal: controller.signal});
+      if (!response.ok) throw new Error('No se pudo cargar el rango');
+      const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const content = page.querySelector('main');
+      if (!content) throw new Error('Respuesta sin contenido');
+      main.querySelectorAll('.interactive-chart').forEach(section => section.chartResizeObserver?.disconnect());
+      main.replaceChildren(...content.childNodes);
+      initCharts(main);
+      if (push) history.pushState({chartRange: true}, '', url);
+      const target = main.querySelector('#seleccion') || main.querySelector('#distribucion-grafico');
+      if (target) { target.tabIndex = -1; target.focus({preventScroll: true}); target.scrollIntoView({block: 'start'}); }
+      reveal(location.hash);
+    } catch (error) {
+      if (error.name !== 'AbortError') location.assign(url);
+    } finally {
+      if (pending === controller) main.removeAttribute('aria-busy');
+    }
+  }
+  document.addEventListener('click', event => {
+    if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest('a');
+    if (!link || !(link.closest('#distribucion-grafico') || link.closest('#seleccion'))) return;
+    const url = new URL(link.getAttribute('href'), location.href);
+    if (url.origin !== location.origin || url.pathname !== location.pathname) return;
+    event.preventDefault();
+    navigateRange(url.href);
+  });
+  addEventListener('popstate', () => { if (document.querySelector('#distribucion-grafico')) navigateRange(location.href, false); });
 })();

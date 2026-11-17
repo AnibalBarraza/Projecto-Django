@@ -24,5 +24,11 @@
     </article>
   {% endif %}
 </div>
-{% include "portal/graficos.html" %}
+{% include "portal/graficos.html" with charts=charts_principales %}
+{% if charts_contexto %}
+  <details class="course-context">
+    <summary>Contexto del curso · edades y tiempos de viaje</summary>
+    {% include "portal/graficos.html" with charts=charts_contexto %}
+  </details>
+{% endif %}
 <p class="context-note">Los datos ayudan a orientar apoyos. Las asociaciones observadas no prueban causalidad ni predicen automáticamente una reprobación.</p>

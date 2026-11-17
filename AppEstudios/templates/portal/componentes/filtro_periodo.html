@@ -1,5 +1,6 @@
 {% if mostrar_filtro_periodo or seccion == "resumen" or seccion == "calificaciones" or seccion == "estudiantes" %}
   <form class="period-filter" method="get" aria-label="Período académico">
+    {% if ficha and request.GET.volver %}<input type="hidden" name="volver" value="{{ request.GET.volver }}">{% endif %}
     <div>
       <label for="semestre">Semestre</label>
       <select id="semestre" name="semestre">

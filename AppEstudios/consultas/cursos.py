@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.http import Http404
 
 from ..paginacion import navegacion, paginar
+from .exploracion import historia_exploracion
 
 RANGOS = [
     (1, 4, "1,0 a <4,0"),
@@ -118,6 +119,9 @@ def datos_curso(
         )
         promedios = {fila["estudiante_id"]: fila["promedio"] for fila in agregados}
         datos["promedios"] = promedios
+        datos["cantidades_notas"] = {
+            fila["estudiante_id"]: fila["cantidad"] for fila in agregados
+        }
         if profesor and seccion == "calificaciones":
             inscritos = list(alumnos)
             datos["alumnos"] = inscritos
@@ -162,9 +166,9 @@ def datos_curso(
                 datos["rango_label"] = elegidos["label"]
                 inscritos = elegidos["alumnos"]
                 notas = notas.filter(estudiante_id__in=[a.pk for a in inscritos])
-            con_notas = [a for a in inscritos if a.pk in promedios]
-            pagina_alumnos = paginar(con_notas, parametros, "pagina_estudiantes")
-            datos["alumnos_grafico"] = list(pagina_alumnos)
+            pagina_alumnos = paginar(inscritos, parametros, "pagina_estudiantes")
+            datos["alumnos_exploracion"] = list(pagina_alumnos)
+            datos["alumnos_grafico"] = [a for a in pagina_alumnos if a.pk in promedios]
             datos["paginacion_alumnos"] = navegacion(
                 pagina_alumnos, parametros, "pagina_estudiantes", "estudiantes-grafico"
             )
@@ -202,6 +206,16 @@ def datos_curso(
             else:
                 raise Http404("Filtro no disponible.")
         pagina = paginar(alumnos, parametros)
+        resumenes = {
+            fila["estudiante_id"]: fila
+            for fila in notas.filter(estudiante__in=list(pagina))
+            .values("estudiante_id")
+            .annotate(promedio=Avg("nota"), cantidad=Count("pk"))
+        }
+        for alumno in pagina:
+            resumen = resumenes.get(alumno.pk, {})
+            alumno.promedio_periodo = resumen.get("promedio")
+            alumno.cantidad_notas = resumen.get("cantidad", 0)
         datos["alumnos"] = pagina
         datos["paginacion_alumnos"] = navegacion(
             pagina, parametros, ancla="lista-estudiantes"
@@ -249,4 +263,11 @@ def datos_curso(
         periodos = set(curso.calificaciones.values_list("semestre", "anio").distinct())
         periodos.add((curso.semestre_actual, curso.anio_actual))
         datos["periodos"] = sorted(periodos, key=lambda p: (p[1], p[0]), reverse=True)
+    if profesor and (seccion == "calificaciones" or ficha is not None):
+        datos["historia_exploracion"] = historia_exploracion(
+            curso,
+            [ficha] if ficha else datos.get("alumnos_exploracion", []),
+            semestre,
+            anio,
+        )
     return datos

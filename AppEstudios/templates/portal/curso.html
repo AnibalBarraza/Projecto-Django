@@ -25,7 +25,7 @@
   {% endfor %}
 </nav>
 {% if ficha %}
-  <a class="back-link" href="{{ url_notas }}">← Calificaciones del curso</a>
+  <a class="back-link" href="{{ url_volver|default:url_notas }}">← Volver a los estudiantes y filtros del curso</a>
 {% endif %}
 <div class="section-heading">
   <div>
@@ -42,7 +42,7 @@
   {% include "portal/componentes/filtro_periodo.html" %}
 </div>
 {% if rango_label %}
-  <div class="selection" id="seleccion">
+  <div class="selection" id="seleccion" role="status">
     <span>Mostrando estudiantes con promedio <strong>{{ rango_label }}</strong>
     </span>
     <a href="{{ url_notas }}">Quitar filtro ×</a>

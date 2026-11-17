@@ -21,7 +21,7 @@
           </td>
           <td>
             <details id="detalle-{{ nota.pk }}">
-              <summary>Nota {{ forloop.counter|add:inicio_notas }} · Ver detalle</summary>
+              <summary>{% if nota.tipo_evaluacion %}{{ nota.get_tipo_evaluacion_display }}{% else %}Nota {{ forloop.counter|add:inicio_notas }}{% endif %} · Ver detalle</summary>
               <p>
                 {{ curso.asignatura }} · semestre {{ nota.semestre }}, {{ nota.anio }}
                 <br>

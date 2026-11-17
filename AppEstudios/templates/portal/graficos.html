@@ -3,7 +3,7 @@
   <div class="charts-grid">
     {% for chart in charts %}
       <section
-        class="card interactive-chart {% if chart.type == 'calor' or chart.type == 'linea' and charts|length == 3 %}chart-wide{% endif %}"
+        class="card interactive-chart {% if chart.type == 'calor' or chart.type == 'matriz' or chart.type == 'linea' and charts|length > 2 %}chart-wide{% endif %}"
         aria-labelledby="title-{{ chart.id }}"
         id="{{ chart.id }}-grafico"
         data-chart="{{ chart.id }}"
@@ -27,6 +27,7 @@
             {% endif %}
           {% endif %}
         </div>
+        <p class="chart-help">{{ chart.help }}</p>
         {% if chart.points %}
           <div class="chart-canvas scroll" data-canvas></div>
           <div class="chart-legend" data-legend></div>
@@ -35,9 +36,11 @@
             class="chart-readout"
             aria-live="polite"
           >Selecciona un elemento para explorar el detalle.</p>
-          <details class="chart-table">
+          <details class="chart-table" {% if chart.id == "cambio-promedios" and ficha %}open{% endif %}>
             <summary>Ver datos y enlaces del gráfico</summary>
-            <p class="chart-help">{{ chart.help }}</p>
+            {% if chart.id == "constancia" or chart.id == "estudio-dias" %}
+              <p class="muted">Solo se muestran días con minutos de estudio registrados.</p>
+            {% endif %}
             <div class="scroll">
               <table>
                 <thead>
@@ -49,13 +52,15 @@
                 </thead>
                 <tbody>
                   {% for point in chart.points %}
+                    {% if chart.id != "constancia" and chart.id != "estudio-dias" or point.value > 0 %}
                     <tr>
                       <td>{{ point.label }}</td>
-                      <td>{{ point.value|floatformat:2 }}</td>
+                      <td>{% if point.missing %}Sin notas{% else %}{{ point.value|floatformat:2 }}{% endif %}{% if point.detail %}<br><small>{{ point.detail }}</small>{% endif %}</td>
                       <td>
                         <a href="{{ point.url }}">Ver detalle de {{ point.label }}</a>
                       </td>
                     </tr>
+                    {% endif %}
                   {% endfor %}
                 </tbody>
               </table>
@@ -68,7 +73,7 @@
             <p>Los gráficos aparecerán cuando existan registros.</p>
           </div>
         {% endif %}
-        {% if chart.id == "estudiantes" %}
+        {% if chart.id == "estudiantes" or chart.id == "historia-estudiantes" or chart.id == "promedio-cantidad" or chart.id == "cambio-promedios" and not ficha %}
           {% include "portal/componentes/paginacion.html" with paginacion=paginacion_alumnos %}
         {% elif chart.id == "notas" %}
           {% include "portal/componentes/paginacion.html" with paginacion=paginacion_notas %}

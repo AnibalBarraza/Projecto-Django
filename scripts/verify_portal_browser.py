@@ -231,15 +231,38 @@ def main():
                 page.locator(".note-entry > summary").click()
                 assert page.locator(".note-entry-form").is_visible()
                 page.locator(".note-entry > summary").click()
+                for chart_id in (
+                    "historia-estudiantes",
+                    "promedio-cantidad",
+                    "cambio-promedios",
+                ):
+                    page.locator(f"[data-chart={chart_id}] svg a").first.wait_for()
+                page.evaluate("window.explorationMarker = 'same-document'")
                 page.locator("[data-chart=distribucion] svg a").nth(1).click()
                 page.wait_for_url("**banda=1#seleccion")
+                assert page.evaluate("window.explorationMarker") == "same-document"
                 assert page.locator("[data-chart=estudiantes] svg a").count() == 1
+                assert page.locator("[data-chart=promedio-cantidad] svg a").count() == 1
                 assert (
                     "Mostrando estudiantes" in page.locator("#seleccion").inner_text()
                 )
                 page.locator("[data-chart=estudiantes] svg a").first.click()
                 page.wait_for_url("**/estudiantes/**")
                 assert "semestre=2" in page.url and "anio=2026" in page.url
+                assert "banda%3D1" in page.url
+                page.locator(".back-link").click()
+                page.wait_for_url("**banda=1#estudiantes-grafico")
+                assert page.locator("[data-chart=estudiantes] svg a").count() == 1
+                page.locator("#seleccion a").click()
+                page.wait_for_function("!document.querySelector('#seleccion')")
+                assert page.locator("[data-chart=estudiantes] svg a").count() == 8
+                page.go_back()
+                page.wait_for_function(
+                    "!!document.querySelector('#seleccion') && !document.querySelector('main[aria-busy]')"
+                )
+                assert page.locator("[data-chart=estudiantes] svg a").count() == 1
+                page.locator("[data-chart=historia-estudiantes] svg a").last.click()
+                page.wait_for_url("**/estudiantes/**")
                 mark = page.locator("[data-chart=notas] svg a").first
                 mark.focus()
                 page.keyboard.press("Enter")
@@ -248,12 +271,26 @@ def main():
                 )
                 screenshot("ficha-desktop.png")
                 page.locator("[data-chart=historia-curso] svg a").first.click()
-                page.wait_for_url("**/estudiantes/**semestre=1&anio=2026")
+                page.wait_for_url("**/estudiantes/**semestre=1&anio=2026*")
                 assert (
                     "Estudiante 0 Prueba"
                     in page.locator(".section-heading h2").inner_text()
                 )
+                page.goto(base + f"/cursos/{course.pk}/calificaciones/?semestre=2&anio=2026")
+                for chart_id in ("promedio-cantidad", "cambio-promedios"):
+                    page.locator(f"[data-chart={chart_id}] svg a").first.click()
+                    page.wait_for_url("**/estudiantes/**")
+                    assert page.locator("[data-chart=cambio-promedios] details").get_attribute("open") is not None
+                    page.locator(".back-link").click()
+                    page.wait_for_url("**/calificaciones/**")
+                page.set_viewport_size({"width": 390, "height": 844})
+                assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+                matrix = page.locator("[data-chart=historia-estudiantes] .chart-canvas")
+                assert matrix.evaluate("node => node.scrollWidth > node.clientWidth")
+                screenshot("exploracion-profesor-mobile.png")
+                page.set_viewport_size({"width": 1365, "height": 900})
                 page.goto(base + f"/cursos/{course.pk}/resumen/")
+                page.locator(".course-context > summary").click()
                 page.locator("[data-chart=edades] svg a").first.wait_for()
                 screenshot("resumen-profesor.png")
                 page.locator("[data-chart=edades] svg a").first.click()
@@ -302,7 +339,8 @@ def main():
                     return {x: point.x, y: point.y};
                 }""")
                 page.mouse.click(position["x"], position["y"])
-                page.wait_for_url("**curso=*#historial")
+                page.wait_for_url("**/calificaciones/")
+                page.goto(base + "/estudio/")
                 page.locator("[data-chart=constancia] svg a").first.click()
                 page.wait_for_url("**fecha=*#historial")
                 page.locator("[data-chart=estudio-dias] svg a").last.click()

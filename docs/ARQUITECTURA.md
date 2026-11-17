@@ -15,6 +15,7 @@ Las rutas públicas no cambiaron. `AppEstudios/urls.py` conecta cada URL con las
 | Selección de semestre/año y paginación compartida | `AppEstudios/periodos.py`, `AppEstudios/paginacion.py` |
 | Colores y navegación compartidos | `AppEstudios/presentacion.py` |
 | Datos de gráficos reutilizables y gráficos por área | `AppEstudios/graficos*.py` |
+| Historia de estudiantes para la exploración y enlaces de retorno | `AppEstudios/consultas/exploracion.py`, `AppEstudios/exploracion.py` |
 | Pantallas y componentes HTML activos | `AppEstudios/templates/portal/` |
 | Estilos y comportamiento de gráficos | `AppEstudios/static/AppEstudios/` |
 | Pruebas separadas por área y datos compartidos | `AppEstudios/tests/` |
@@ -44,6 +45,8 @@ El filtro de período y la navegación entre páginas están en `portal/componen
 Las notas se consultan de 30 en 30. El promedio y la distribución del período se calculan mediante agregados sobre todas sus notas antes de paginar. El gráfico individual representa únicamente las notas de la página visible y cada barra tiene un destino presente en esa página.
 
 El listado de estudiantes, los hábitos y las tareas también se paginan de 30 en 30. El gráfico de promedios de estudiantes tiene su propio parámetro `pagina_estudiantes`; la distribución sigue considerando todo el período. Los enlaces conservan semestre, año y rango seleccionado.
+
+La exploración histórica consulta como máximo ocho períodos y agrega las notas de los estudiantes de la página visible en dos consultas, sin consultas individuales por alumno. Los períodos posteriores al seleccionado se excluyen. La matriz incluye alumnos sin notas actuales; los gráficos de promedio y de cambio solo representan los registros que requieren. La navegación por bandas usa HTML del servidor para conservar las mismas reglas de acceso, filtros y agregados; JavaScript reemplaza el contenido y mantiene el historial del navegador.
 
 Las copias históricas de tareas por estudiante se agrupan en SQL antes de paginar el listado del profesor. Desde el calendario se abre la entrega seleccionada mediante un filtro por ID, comprobando que sea visible para la cuenta; así también funciona si la entrega no está en la primera página. Un enlace permite volver a todas las tareas del curso.
 

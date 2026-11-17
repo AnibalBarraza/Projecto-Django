@@ -1,5 +1,5 @@
 from django import forms
-from ..models import Sala, Estudiante
+from ..models import Sala, Estudiante, Calificacion
 
 
 class CursoForm(forms.ModelForm):
@@ -33,6 +33,10 @@ class EstudianteChoiceField(forms.ModelChoiceField):
 
 
 class NotaForm(forms.Form):
+    tipo_evaluacion = forms.ChoiceField(
+        label="Evaluación",
+        choices=[("", "Selecciona una evaluación")] + Calificacion.TIPO_EVALUACION_CHOICES,
+    )
     estudiante = EstudianteChoiceField(
         queryset=Estudiante.objects.none(), label="Estudiante"
     )

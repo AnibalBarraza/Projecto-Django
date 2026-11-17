@@ -55,6 +55,9 @@
         <label for="{{ nota_form.estudiante.id_for_label }}">Estudiante</label>{{ nota_form.estudiante }}{{ nota_form.estudiante.errors }}
       </div>
       <div>
+        <label for="{{ nota_form.tipo_evaluacion.id_for_label }}">Evaluación</label>{{ nota_form.tipo_evaluacion }}{{ nota_form.tipo_evaluacion.errors }}
+      </div>
+      <div>
         <label for="{{ nota_form.nota.id_for_label }}">Nota · 1,0 a 7,0</label>{{ nota_form.nota }}{{ nota_form.nota.errors }}
       </div>
       <button name="crear_nota">Guardar nota</button>

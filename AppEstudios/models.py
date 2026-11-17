@@ -73,6 +73,14 @@ class Materia(models.Model):
         return self.nombre
 
 class Calificacion(models.Model):
+    TIPO_EVALUACION_CHOICES = [
+        ("certamen_1", "Certamen 1"),
+        ("certamen_2", "Certamen 2"),
+        ("control", "Control"),
+    ]
+    tipo_evaluacion = models.CharField(
+        max_length=20, choices=TIPO_EVALUACION_CHOICES, blank=True, default=""
+    )
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
     semestre = models.IntegerField(help_text="Ejemplo: 1 o 2")

@@ -27,6 +27,7 @@ def registrar_nota(curso, datos):
         materia=materia,
         estudiante=datos["estudiante"],
         nota=datos["nota"],
+        tipo_evaluacion=datos["tipo_evaluacion"],
         semestre=actual.semestre_actual,
         anio=actual.anio_actual,
     )

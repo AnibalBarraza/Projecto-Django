@@ -25,6 +25,10 @@ Abre http://127.0.0.1:8000/. Regístrate como Estudiante o Profesor. Elegir Prof
 5. Profesor: revisa estudiantes, ficha, distribución de promedios y hábitos de cada curso. Cierra un semestre desde Configuración escribiendo SI. Las notas anteriores siguen disponibles al seleccionar semestre y año; una pestaña desactualizada no repite el cierre.
 6. Estudiante: registra estudio general y por curso en la misma fecha. Guardar otra vez actualiza el total de ese curso. La meta y progreso semanales suman todos los cursos; registra cada bloque de tiempo una sola vez.
 
+## Datos de demostración
+
+` .\.venv\Scripts\python.exe manage.py crear_demo ` agrega a la base configurada 2 profesores (`demo_profe_1`, `demo_profe_2`), 16 estudiantes (`demo_estudiante_01` a `demo_estudiante_16`) y 4 cursos marcados como Demo. Incluye notas de tres semestres, tareas y registros de estudio de cuatro semanas. Imprime una contraseña generada común a las cuentas ficticias. No modifica cuentas existentes y rechaza una segunda carga si ya hay usuarios `demo_*`. Los datos permanecen guardados para recorrer la aplicación y cambiar entre cuentas.
+
 ## Pruebas aisladas (sin RDS)
 
 ```powershell
