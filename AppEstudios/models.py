@@ -73,6 +73,14 @@ class Materia(models.Model):
         return self.nombre
 
 class Calificacion(models.Model):
+    TIPO_EVALUACION_CHOICES = [
+        ("certamen_1", "Certamen 1"),
+        ("certamen_2", "Certamen 2"),
+        ("control", "Control"),
+    ]
+    tipo_evaluacion = models.CharField(
+        max_length=20, choices=TIPO_EVALUACION_CHOICES, blank=True, default=""
+    )
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
     semestre = models.IntegerField(help_text="Ejemplo: 1 o 2")
@@ -85,11 +93,14 @@ class Calificacion(models.Model):
         null=True,
         blank=True,
     )
+    class Meta:
+        indexes = [models.Index(fields=['sala', 'anio', 'semestre'], name='nota_curso_periodo_idx')]
+
     def __str__(self):
         return f"{self.estudiante.nombre} - {self.materia.nombre}: {self.nota}"
 
 class Tarea(models.Model):
-    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
+    estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE, null=True, blank=True)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
     titulo = models.CharField(max_length=200)
     fecha_entrega = models.DateField()
@@ -110,15 +121,23 @@ class RegistroEstudio(models.Model):
         on_delete=models.CASCADE,
         related_name="registros_estudio",
     )
+    sala = models.ForeignKey(Sala, on_delete=models.PROTECT, null=True, blank=True, related_name="registros_estudio")
     fecha = models.DateField()
     minutos = models.PositiveIntegerField()
 
     class Meta:
         ordering = ["-fecha"]
+        indexes = [models.Index(fields=["sala", "fecha"], name="estudio_curso_fecha_idx")]
         constraints = [
             models.UniqueConstraint(
+                fields=["estudiante", "fecha", "sala"],
+                condition=models.Q(sala__isnull=False),
+                name="estudio_unico_dia_curso",
+            ),
+            models.UniqueConstraint(
                 fields=["estudiante", "fecha"],
-                name="estudio_unico_por_dia",
+                condition=models.Q(sala__isnull=True),
+                name="estudio_unico_dia_general",
             ),
             models.CheckConstraint(
                 condition=models.Q(minutos__lte=1440),

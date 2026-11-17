@@ -1,0 +1,52 @@
+{% extends "portal/base.html" %}
+{% block title %}
+  {{ curso.asignatura }} · {{ titulo_seccion }}{% endblock %}
+{% block content %}
+  <div class="course-topline">
+    <a href="{% url 'tablero' %}">← Mis asignaturas</a>
+    <span>{{ curso.nombre_profesor }}{% if curso.archivada %} · Archivado{% endif %}</span>
+  </div>
+  <div class="course-heading" style="--course:{{ color }}">
+    <div>
+      <p class="eyebrow">Asignatura</p>
+      <h1>{{ curso.asignatura }}{% if curso.seccion %}
+        <span class="section-badge">{{ curso.seccion }}</span>
+{% endif %}
+</h1>
+</div>
+<span class="period-badge">Período actual · S{{ curso.semestre_actual }} / {{ curso.anio_actual }}</span>
+</div>
+<nav class="tabs" aria-label="Secciones del curso">
+  {% for clave, etiqueta in secciones %}
+    <a
+      href="{% url 'curso_seccion' curso.pk clave %}?semestre={{ semestre }}&anio={{ anio }}"
+      {% if seccion == clave %}aria-current="page"{% endif %}
+    >{{ etiqueta }}</a>
+  {% endfor %}
+</nav>
+{% if ficha %}
+  <a class="back-link" href="{{ url_volver|default:url_notas }}">← Volver a los estudiantes y filtros del curso</a>
+{% endif %}
+<div class="section-heading">
+  <div>
+    <h2>
+      {% if ficha %}
+        {{ ficha.nombre }} {{ ficha.apellido }}{% else %}
+        {{ titulo_seccion }}{% endif %}
+    </h2>
+    <p class="muted">
+      {% if seccion == "calificaciones" or ficha %}Notas y avances del período seleccionado.{% elif seccion == "resumen" %}Una mirada al curso y a sus estudiantes.{% elif seccion == "habitos" %}Tiempo registrado para orientar el acompañamiento.{% elif seccion == "tareas" %}Entregas y fechas de este curso.{% else %}
+        {{ curso.asignatura }} · {{ curso.seccion }}{% endif %}
+    </p>
+  </div>
+  {% include "portal/componentes/filtro_periodo.html" %}
+</div>
+{% if rango_label %}
+  <div class="selection" id="seleccion" role="status">
+    <span>Mostrando estudiantes con promedio <strong>{{ rango_label }}</strong>
+    </span>
+    <a href="{{ url_notas }}">Quitar filtro ×</a>
+  </div>
+{% endif %}
+{% include plantilla_seccion %}
+{% endblock %}

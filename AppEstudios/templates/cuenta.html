@@ -1,102 +1,46 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mi cuenta · Diagnóstico Escolar</title>
-
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
-        rel="stylesheet">
-
-    <style>
-        input:not([type="checkbox"]), select {
-            width: 100%;
-            padding: .5rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-        }
-
-        .errorlist {
-            color: #b91c1c;
-        }
-
-        .helptext {
-            display: block;
-            font-size: .85rem;
-            color: #64748b;
-        }
-    </style>
-</head>
-
-<body class="bg-light">
-<main class="container py-5" style="max-width: 580px;">
-    <a href="{% url 'index' %}">← Inicio</a>
-
-    <section class="card border-0 shadow-sm rounded-4 p-4 mt-3">
-
-        {% if modo == "pendiente" %}
-
-            <h1 class="h3">Completa tu cuenta</h1>
-
-            <p>
-                Hola, <strong>{{ request.user.username }}</strong>.
-                Elige cómo utilizarás la plataforma.
-            </p>
-
-            <form method="post" action="{% url 'elegir_rol' %}">
-                {% csrf_token %}
-                {{ form.as_p }}
-
-                <button type="submit" class="btn btn-primary w-100">
-                    Continuar
-                </button>
-            </form>
-
-            <form method="post"
-                  action="{% url 'salir' %}"
-                  class="mt-3">
-                {% csrf_token %}
-
-                <button type="submit" class="btn btn-outline-secondary">
-                    Cerrar sesión
-                </button>
-            </form>
-
-        {% else %}
-
-            {% if modo == "registro" %}
-                <h1 class="h3">Crea tu cuenta</h1>
-                <p>Elige Estudiante o Profesor para comenzar.</p>
-            {% else %}
-                <h1 class="h3">Bienvenido de nuevo</h1>
-                <p>Ingresa con tu cuenta para acceder a tus cursos.</p>
-            {% endif %}
-
-            <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
-
-                <button type="submit" class="btn btn-primary w-100">
-                    {% if modo == "registro" %}
-                        Crear cuenta
-                    {% else %}
-                        Iniciar sesión
-                    {% endif %}
-                </button>
-            </form>
-
-            <p class="mt-3 mb-0">
-                {% if modo == "registro" %}
-                    <a href="{% url 'ingresar' %}">Ya tengo cuenta</a>
-                {% else %}
-                    <a href="{% url 'registrarse' %}">Crear cuenta</a>
-                {% endif %}
-            </p>
-
-        {% endif %}
-
-    </section>
-</main>
-</body>
-</html>
+{% extends "publica/base.html" %}
+{% block title %}Mi cuenta · Diagnóstico Escolar{% endblock %}
+{% block content %}
+  <div class="auth-shell">
+    <a class="back-link" href="{% url 'index' %}">← Volver al inicio</a>
+    <section class="auth-card">
+      {% if modo == "pendiente" %}
+        <p class="eyebrow">Un último paso</p>
+        <h1>Completa tu cuenta</h1>
+        <p>Hola, <strong>{{ request.user.username }}</strong>. Elige cómo utilizarás la plataforma.</p>
+        <form method="post" action="{% url 'elegir_rol' %}">
+          {% csrf_token %}
+          {{ form.as_p }}<button type="submit">Continuar</button>
+        </form>
+        <form method="post" action="{% url 'salir' %}" class="auth-logout">
+          {% csrf_token %}
+          <button type="submit" class="secondary">Cerrar sesión</button>
+        </form>
+      {% else %}
+        <p class="eyebrow">Tu espacio académico</p>
+        <h1>
+          {% if modo == "registro" %}
+            {% if request.user.is_authenticated %}Crear otra cuenta{% else %}Comienza a conectar tus avances.{% endif %}
+      {% elif cambio_cuenta or request.user.is_authenticated %}Cambiar de cuenta{% else %}Qué bueno verte de nuevo.{% endif %}
+        </h1>
+        <p>
+          {% if modo == "registro" %}Cada cuenta tiene su propio perfil, cursos y permisos.{% elif request.user.is_authenticated %}Ahora estás usando <strong>{{ request.user.username }}</strong>. Ingresa las credenciales de la otra cuenta para cambiar.{% else %}Ingresa con la cuenta que quieres utilizar.{% endif %}
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          {{ form.as_p }}<button type="submit">
+          {% if modo == "registro" %}Crear cuenta{% elif cambio_cuenta or request.user.is_authenticated %}Entrar con esta cuenta{% else %}Iniciar sesión{% endif %}
+          </button>
+        </form>
+        <p class="auth-link">
+        {% if modo == "registro" %}¿Ya tienes otra cuenta? <a href="{% url 'cambiar_cuenta' %}">Inicia sesión</a>
+      {% else %}¿Necesitas otra cuenta? <a href="{% url 'registrarse' %}">Crear cuenta</a>
+      {% endif %}
+    </p>
+    {% if request.user.is_authenticated %}
+      <a class="auth-link" href="{% url 'mi_cuenta' %}">Volver a la cuenta actual</a>
+    {% endif %}
+{% endif %}
+</section>
+</div>
+{% endblock %}

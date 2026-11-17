@@ -1,0 +1,95 @@
+{% extends "portal/base.html" %}
+{% block content %}
+  <div class="section-heading board-heading">
+    <div>
+      <p class="eyebrow">Tu espacio de aprendizaje</p>
+      <h1>Mis asignaturas</h1>
+      <p class="muted">
+        {% if profesor %}Administra tus cursos y secciones desde un mismo lugar.{% else %}Tus cursos, entregas y avances en un solo lugar.{% endif %}
+      </p>
+    </div>
+    {% if profesor %}
+      <a
+        class="button"
+        href="{% url 'crear_curso' %}"
+        data-open-dialog="crear-curso"
+      >＋ Crear curso</a>
+    {% endif %}
+  </div>
+  {% if not profesor %}
+    <details class="note-entry enrollment">
+      <summary>
+        <span class="button">＋ Inscribirme en un curso</span>
+      </summary>
+      <form
+        class="enrollment-form"
+        method="post"
+        action="{% url 'inscribirse' %}"
+      >
+        {% csrf_token %}
+        <div>
+          <label for="codigo">Código de inscripción</label>
+          <input
+            id="codigo"
+            name="codigo_sala"
+            maxlength="10"
+            required
+            autocomplete="off"
+          >
+        </div>
+        <button>Inscribirme</button>
+      </form>
+    </details>
+  {% endif %}
+  <div class="grid course-grid">
+    {% for tarjeta in tarjetas %}
+      <article class="card course-card" style="--course:{{ tarjeta.color }}">
+        <p class="eyebrow">
+        {% if tarjeta.curso.archivada %}Archivado{% else %}Curso{% endif %} · {{ tarjeta.curso.seccion|default:'Sin sección' }}</p>
+        <h2>
+          <a href="{% url 'curso' tarjeta.curso.pk %}">{{ tarjeta.curso.asignatura }}</a>
+        </h2>
+        <p>{{ tarjeta.curso.nombre_profesor }}</p>
+        <p>Semestre {{ tarjeta.curso.semestre_actual }} · {{ tarjeta.curso.anio_actual }}</p>
+        {% if profesor %}
+          <small>Código de inscripción</small>
+          <strong class="code">{{ tarjeta.curso.codigo }}</strong>
+        {% endif %}
+        <p>
+          <a href="{% url 'curso' tarjeta.curso.pk %}">Abrir curso →</a>
+        </p>
+      </article>
+    {% empty %}
+      <div class="empty board-empty">
+        <h2>Aún no tienes cursos</h2>
+        <p>
+          {% if profesor %}Usa «Crear curso» para agregar tu primera asignatura o sección.{% else %}Inscríbete con el código que te dio tu profesor.{% endif %}
+        </p>
+      </div>
+    {% endfor %}
+  </div>
+  {% if profesor %}
+    <dialog
+      id="crear-curso"
+      class="course-dialog"
+      aria-labelledby="crear-curso-titulo"
+    >
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">Un nuevo espacio para aprender</p>
+          <h2 id="crear-curso-titulo">Crear curso o sección</h2>
+        </div>
+        <button
+          class="dialog-close secondary"
+          type="button"
+          data-close-dialog
+          aria-label="Cerrar formulario"
+        >
+          ×
+        </button>
+      </div>
+      <p class="muted">Cada sección tendrá su propio código de inscripción y período.</p>
+      {% include "portal/componentes/formulario_curso.html" %}
+    </dialog>
+  {% endif %}
+{% endblock %}

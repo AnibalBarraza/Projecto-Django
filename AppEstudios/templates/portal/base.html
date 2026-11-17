@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Diagnóstico Escolar{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'AppEstudios/portal.css' %}">
+    <script src="{% static 'AppEstudios/graficos.js' %}" defer></script>
+    <script src="{% static 'AppEstudios/portal.js' %}" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#contenido">Ir al contenido</a>
+    <aside class="sidebar">
+      <a class="brand" href="{% url 'tablero' %}">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M4 7c5-2 9-1 12 2 3-3 7-4 12-2v20c-5-2-9-1-12 1-3-2-7-3-12-1z" />
+          <path d="M16 9v19M9 13h3m-3 5h3m8-5h3m-3 5h3" />
+        </svg>
+        <span>Diagnóstico <strong>Escolar</strong>
+        </span>
+      </a>
+      <p class="nav-label">MI ESPACIO</p>
+      <nav class="global" aria-label="Navegación principal">
+        <a href="{% url 'index' %}">← Inicio</a>
+        <a
+          href="{% url 'tablero' %}"
+          {% if activo == 'tablero' %}aria-current="page"{% endif %}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>Mis asignaturas</a>
+          <a
+            href="{% url 'rendimiento' %}"
+            {% if activo == 'rendimiento' %}aria-current="page"{% endif %}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 20h17M6 16V9m6 7V4m6 12v-5" />
+            </svg>Rendimiento general</a>
+            <a
+              href="{% url 'calendario' %}"
+              {% if activo == 'calendario' %}aria-current="page"{% endif %}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M7 3v5m10-5v5M3 11h18m-13 4h2m4 0h2" />
+              </svg>Calendario</a>
+              {% if not profesor %}
+                <a
+                  href="{% url 'estudio' %}"
+                  {% if activo == 'estudio' %}aria-current="page"{% endif %}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="13" r="8" />
+                    <path d="M12 9v5l3 2M9 2h6" />
+                  </svg>Hábitos de estudio</a>
+              {% endif %}
+            </nav>
+            <div class="sidebar-note">
+              <span class="status-dot">
+              </span>Seguimiento académico<small>Comprender para acompañar.</small>
+            </div>
+          </aside>
+          <div class="workspace">
+            <header class="topbar">
+              <span class="workspace-label">Mi espacio académico <span>/ {% if profesor %}Profesor{% else %}Estudiante{% endif %}
+                </span>
+              </span>
+              <div class="account-menu">
+                <a class="switch-account" href="{% url 'cambiar_cuenta' %}">Cambiar de cuenta</a>
+                <span
+                  class="avatar"
+                  aria-hidden="true"
+                >{{ request.user.username|slice:':1'|upper }}</span>
+                <span class="account-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                <form class="logout" method="post" action="{% url 'salir' %}">
+                  {% csrf_token %}
+                  <button>Salir</button>
+                </form>
+              </div>
+            </header>
+            <main id="contenido">
+              {% for message in messages %}
+                <div class="message" role="status">{{ message }}</div>
+              {% endfor %}
+              {% block content %}{% endblock %}
+            </main>
+          </div>
+        </body>
+      </html>

@@ -1,0 +1,41 @@
+{% load l10n %}
+<div class="scroll" id="tabla-notas">
+  <table>
+    <thead>
+      <tr>
+        {% if profesor %}
+          <th>Estudiante</th>
+        {% endif %}
+        <th>Nota · 1,0–7,0</th>
+        <th>Detalle</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for nota in notas %}
+        <tr class="note-detail" id="nota-{{ nota.pk }}">
+          {% if profesor %}
+            <td>{{ nota.estudiante.nombre }} {{ nota.estudiante.apellido }}</td>
+          {% endif %}
+          <td>
+            <a href="#detalle-{{ nota.pk }}" class="grade-pill">{{ nota.nota|floatformat:2 }}</a>
+          </td>
+          <td>
+            <details id="detalle-{{ nota.pk }}">
+              <summary>{% if nota.tipo_evaluacion %}{{ nota.get_tipo_evaluacion_display }}{% else %}Nota {{ forloop.counter|add:inicio_notas }}{% endif %} · Ver detalle</summary>
+              <p>
+                {{ curso.asignatura }} · semestre {{ nota.semestre }}, {{ nota.anio }}
+                <br>
+                Nota: <strong>{{ nota.nota|floatformat:2 }}</strong>
+              </p>
+            </details>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="3">Sin calificaciones en este período.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "portal/componentes/paginacion.html" with paginacion=paginacion_notas %}

@@ -1,0 +1,189 @@
+{% extends "publica/base.html" %}
+{% block content %}
+  <section class="landing-hero">
+    <div class="hero-copy">
+      <p class="hero-eyebrow">
+        <span></span>Seguimiento y apoyo académico
+      </p>
+      <h1>
+        Cada avance cuenta.
+        <br>
+        <em>Acompañémoslo mejor.</em>
+      </h1>
+      <p class="hero-description">Conecta calificaciones, organización y hábitos de estudio en un espacio claro. Más contexto para enseñar. Más herramientas para aprender.</p>
+      <div class="hero-actions">
+        {% if request.user.is_authenticated %}
+          <a class="button" href="{% url 'mi_cuenta' %}">Ir a mi tablero →</a>
+        {% else %}
+          <a class="button" href="{% url 'registrarse' %}">Comenzar ahora →</a>
+        {% endif %}
+        <a class="text-link" href="#plataforma">Conocer la plataforma ↓</a>
+      </div>
+      <div class="hero-traits">
+        <span>Asignaturas organizadas</span>
+        <span>Avances visibles</span>
+        <span>Apoyo con contexto</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="illustration-label">TU APRENDIZAJE, EN PERSPECTIVA</div>
+      <div
+        class="product-preview"
+        aria-label="Vista ilustrativa de la plataforma, sin datos reales"
+      >
+        <div class="preview-bar">
+          <span class="preview-dots">● ● ●</span>
+          <strong>Mi espacio académico</strong>
+          <span class="preview-avatar">Tú</span>
+        </div>
+        <div class="preview-body">
+          <div class="preview-menu">
+            <span class="preview-active">Asignaturas</span>
+            <span>Rendimiento</span>
+            <span>Calendario</span>
+            <span>Mi estudio</span>
+          </div>
+          <div class="preview-content">
+            <h3>Una mirada a tu progreso</h3>
+            <div class="preview-courses">
+              <div>
+                <i class="course-symbol purple">M</i>
+                <strong>Matemática</strong>
+                <small>Tu curso, en un lugar</small>
+              </div>
+              <div>
+                <i class="course-symbol teal">L</i>
+                <strong>Lenguaje</strong>
+                <small>Aprender a tu ritmo</small>
+              </div>
+            </div>
+            <div class="preview-chart">
+              <span>Tu avance por período</span>
+              <svg
+                viewBox="0 0 320 100"
+                role="img"
+                aria-label="Ilustración de un gráfico de seguimiento"
+              >
+                <path class="preview-grid" d="M10 20h300M10 50h300M10 80h300" />
+                <path class="preview-area" d="M15 77L85 61L155 69L225 35L305 22V90H15Z" />
+                <path class="preview-line" d="M15 77L85 61L155 69L225 35L305 22" />
+                <g>
+                <circle cx="15" cy="77" r="4" />
+                <circle cx="85" cy="61" r="4" />
+                <circle cx="155" cy="69" r="4" />
+                <circle cx="225" cy="35" r="4" />
+                <circle cx="305" cy="22" r="4" />
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="floating-study">
+        <span class="floating-icon">◷</span>
+        <div>
+          <strong>Un paso a la vez</strong>
+          <small>Organiza tu próxima sesión de estudio</small>
+        </div>
+        <span>✓</span>
+      </div>
+      <p class="preview-caption">Vista ilustrativa · no representa resultados reales</p>
+    </div>
+  </section>
+  <section id="plataforma" class="landing-section">
+    <div class="section-intro">
+      <p class="eyebrow">Información que se entiende</p>
+      <h2>
+        Todo conectado.
+        <br>
+        Sin perder de vista a la persona.
+      </h2>
+      <p>El rendimiento es parte de una historia más amplia. Reúne lo que necesitas para observar avances y orientar el acompañamiento.</p>
+    </div>
+    <div class="feature-grid">
+      <article>
+        <span class="feature-icon">▦</span>
+        <h3>Un espacio por asignatura</h3>
+        <p>Cursos y secciones independientes, con sus propias calificaciones, tareas y fechas de entrega.</p>
+        <span class="feature-detail">Menos búsquedas. Más claridad.</span>
+      </article>
+      <article>
+        <span class="feature-icon teal-icon">↗</span>
+        <h3>Datos que puedes explorar</h3>
+        <p>Compara períodos y profundiza desde un curso hasta una nota, con gráficos que llevan a su detalle.</p>
+        <span class="feature-detail">Del panorama al detalle.</span>
+      </article>
+      <article>
+        <span class="feature-icon amber-icon">◷</span>
+        <h3>Hábitos que puedes seguir</h3>
+        <p>Registra tus minutos de estudio, ajusta tu meta semanal y revisa cómo distribuyes el tiempo.</p>
+        <span class="feature-detail">Un avance, cada día.</span>
+      </article>
+    </div>
+  </section>
+  <section id="como-funciona" class="workflow-section">
+    <div>
+      <p class="eyebrow">Una forma simple de comenzar</p>
+      <h2>
+        Del dato a una
+        <br>
+        acción concreta.
+      </h2>
+      <p>La información ayuda a conversar, organizarse y decidir qué revisar a continuación.</p>
+    </div>
+    <ol class="workflow-steps">
+      <li>
+        <span>01</span>
+        <div>
+          <h3>Conecta tus asignaturas</h3>
+          <p>Crea tus cursos como profesor o inscríbete con un código como estudiante.</p>
+        </div>
+      </li>
+      <li>
+        <span>02</span>
+        <div>
+          <h3>Observa lo que está pasando</h3>
+          <p>Consulta notas, entregas y tiempo registrado, sin mezclar cursos ni períodos.</p>
+        </div>
+      </li>
+      <li>
+        <span>03</span>
+        <div>
+          <h3>Organiza el siguiente paso</h3>
+          <p>Revisa una entrega, consulta una nota o prepara tu próxima sesión de estudio.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+  <section id="comenzar" class="landing-section start-section">
+    <div class="section-intro">
+      <p class="eyebrow">Dos miradas, un mismo propósito</p>
+      <h2>Tu espacio empieza aquí.</h2>
+      <p>Elige cómo quieres comenzar. Cada perfil tiene herramientas para su día a día.</p>
+    </div>
+    <div class="profile-grid">
+      <article>
+        <span class="profile-tag">PARA PROFESORES</span>
+        <h3>Acompaña con más contexto.</h3>
+        <p>Organiza cursos, registra calificaciones y explora el avance de tus estudiantes.</p>
+        <a
+          href="{% if request.user.is_authenticated %}
+{% url 'mi_cuenta' %}
+{% else %}
+{% url 'registrarse' %}?rol=profesor{% endif %}"
+        >Comenzar como profesor →</a>
+      </article>
+      <article>
+        <span class="profile-tag">PARA ESTUDIANTES</span>
+        <h3>Haz visible tu aprendizaje.</h3>
+        <p>Reúne tus asignaturas, sigue tus notas y construye una rutina de estudio.</p>
+        <a
+          href="{% if request.user.is_authenticated %}
+{% url 'mi_cuenta' %}
+{% else %}
+{% url 'registrarse' %}?rol=estudiante{% endif %}"
+        >Comenzar como estudiante →</a>
+      </article>
+    </div>
+  </section>
+{% endblock %}

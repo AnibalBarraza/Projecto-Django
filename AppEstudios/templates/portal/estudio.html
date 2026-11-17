@@ -1,0 +1,97 @@
+{% extends "portal/base.html" %}
+{% block content %}
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">Organización y aprendizaje</p>
+      <h1>Hábitos de estudio</h1>
+      <p class="muted">Observa tu ritmo, organiza tu semana y registra tus avances.</p>
+    </div>
+    <span class="period-badge">{{ lunes|date:'d/m' }} — {{ hoy|date:'d/m/Y' }}</span>
+  </div>
+  <section class="card study-overview">
+    <div>
+      <span class="metric-label">Tu progreso de esta semana</span>
+      <div class="study-total">
+        <strong>{{ minutos_semana }}</strong>
+        <span>de {{ estudiante.meta_semanal_minutos }} min</span>
+        <span class="progress-badge">{{ progreso_meta }}% de la meta</span>
+      </div>
+      <progress max="100" value="{{ progreso_meta }}">{{ progreso_meta }}%</progress>
+    </div>
+    <div class="study-advice">
+      <span class="advice-icon" aria-hidden="true">✦</span>
+      <div>
+        <strong>Un paso a la vez</strong>
+        <p>{{ consejo_estudio }}</p>
+      </div>
+    </div>
+  </section>
+  <details class="note-entry study-entry" {% if form.errors %}open{% endif %}>
+    <summary>
+      <span class="button">＋ Registrar estudio</span>
+      <span class="muted">También puedes ajustar tu meta semanal.</span>
+    </summary>
+    <form method="post" action="{% url 'estudio' %}" class="study-form">
+      {% csrf_token %}
+      {{ form.non_field_errors }}{% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}
+      </div>
+{% endfor %}
+<button>Guardar total y meta</button>
+<p class="form-hint">Guarda el total del día para el curso elegido. Volver a guardar la misma fecha y curso actualiza ese total. Registra cada bloque de tiempo una sola vez.</p>
+</form>
+</details>
+{% include "portal/graficos.html" %}
+<details
+  class="card notes-register"
+  id="historial"
+  {% if filtros %}open{% endif %}
+>
+  <summary>
+    <span>
+      <strong>Historial de estudio</strong>
+      <small>{{ historial.paginator.count }} registros{% if filtros %} · Historial filtrado{% endif %}
+      </small>
+    </span>
+    <span class="muted">Ver registros</span>
+  </summary>
+  <div class="register-body">
+    {% if filtros %}
+      <p class="selection">Historial filtrado {% if filtros.fecha %}· {{ filtros.fecha|date:'d/m/Y' }}{% endif %}
+        {% if filtros.curso %}· Curso seleccionado{% endif %}
+        <a href="{% url 'estudio' %}#historial">Quitar filtro ×</a>
+      </p>
+    {% endif %}
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Curso</th>
+            <th>Total diario</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for registro in historial %}
+            <tr>
+              <td>{{ registro.fecha|date:'d/m/Y' }}</td>
+              <td>
+                {% if registro.sala %}
+                  {{ registro.sala.asignatura }} {{ registro.sala.seccion }}{% else %}Estudio general{% endif %}
+              </td>
+              <td>{{ registro.minutos }} min</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="3">Aún no registras estudio.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% include "portal/componentes/paginacion.html" with paginacion=paginacion_historial %}
+    <p class="context-note history-note">Los registros anteriores se conservan como Estudio general.</p>
+  </div>
+</details>
+{% endblock %}

@@ -1,0 +1,8 @@
+<form
+  method="post"
+  action="{% url 'crear_curso' %}"
+  class="create-course-form"
+>
+  {% csrf_token %}
+  {{ form.as_p }}<button>Crear curso</button>
+</form>

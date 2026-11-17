@@ -1,0 +1,88 @@
+<div class="stats-grid">
+  <article class="card metric">
+    <span class="metric-label">Promedio del período</span>
+    <strong class="metric-value">
+      {% if promedio != None %}
+        {{ promedio|floatformat:2 }}<small>/ 7,0</small>
+      {% else %}
+        <span class="no-data">Sin calificaciones</span>
+      {% endif %}
+    </strong>
+    <span class="metric-foot">
+    {% if profesor and not ficha %}Curso completo · {% endif %}Semestre {{ semestre }} · {{ anio }}</span>
+  </article>
+  <article class="card metric">
+    <span class="metric-label">Notas registradas</span>
+    <strong class="metric-value">{{ total_notas }}</strong>
+    <span class="metric-foot">
+      {% if rango_label %}Curso completo, sin limitar al rango{% else %}Total del período, en todas las páginas{% endif %}
+    </span>
+  </article>
+  {% if profesor and not ficha %}
+    <article class="card metric">
+      <span class="metric-label">Estudiantes con notas</span>
+      <strong class="metric-value">{{ estudiantes_con_notas }}<small>/ {{ total_alumnos }}</small>
+      </strong>
+      <span class="metric-foot">Estudiantes inscritos en este curso</span>
+    </article>
+  {% else %}
+    <article class="card metric">
+      <span class="metric-label">Rango de notas</span>
+      <strong class="metric-value metric-range">
+        {% if nota_minima != None %}
+          {{ nota_minima|floatformat:1 }} <span>—</span> {{ nota_maxima|floatformat:1 }}{% else %}
+          <span class="no-data">Sin calificaciones</span>
+        {% endif %}
+      </strong>
+      <span class="metric-foot">Menor y mayor nota del período completo</span>
+    </article>
+  {% endif %}
+</div>
+{% if profesor and not ficha and not curso.archivada %}
+  <details class="note-entry" {% if nota_form.errors %}open{% endif %}>
+    <summary>
+      <span class="button">＋ Registrar nota</span>
+      <span class="muted">{{ curso.asignatura }} · semestre {{ curso.semestre_actual }}, {{ curso.anio_actual }}</span>
+    </summary>
+    <form
+      method="post"
+      action="{% url 'curso_seccion' curso.pk 'calificaciones' %}"
+      class="note-entry-form"
+    >
+      {% csrf_token %}
+      {{ nota_form.non_field_errors }}
+      <div>
+        <label for="{{ nota_form.estudiante.id_for_label }}">Estudiante</label>{{ nota_form.estudiante }}{{ nota_form.estudiante.errors }}
+      </div>
+      <div>
+        <label for="{{ nota_form.tipo_evaluacion.id_for_label }}">Evaluación</label>{{ nota_form.tipo_evaluacion }}{{ nota_form.tipo_evaluacion.errors }}
+      </div>
+      <div>
+        <label for="{{ nota_form.nota.id_for_label }}">Nota · 1,0 a 7,0</label>{{ nota_form.nota }}{{ nota_form.nota.errors }}
+      </div>
+      <button name="crear_nota">Guardar nota</button>
+      <p class="form-hint">La asignatura y el período se obtienen de este curso.</p>
+    </form>
+  </details>
+{% endif %}
+{% include "portal/graficos.html" %}
+{% if profesor and not ficha %}
+  <details class="card notes-register">
+    <summary>
+      <span>
+        <strong>Registro de calificaciones</strong>
+        <small>Notas individuales del período seleccionado</small>
+      </span>
+      <span class="muted">Ver registros</span>
+    </summary>
+    <div class="register-body">{% include "portal/notas.html" %}</div>
+  </details>
+{% else %}
+  <article class="card notes-register">
+    <div class="panel-heading">
+      <h3>Detalle de notas</h3>
+      <span class="muted">Semestre {{ semestre }} · {{ anio }}</span>
+    </div>
+    {% include "portal/notas.html" %}
+  </article>
+{% endif %}

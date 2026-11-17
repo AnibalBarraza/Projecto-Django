@@ -79,6 +79,8 @@ WSGI_APPLICATION = 'Proyecto_Estudio.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# A bounded pool also reuses connections between runserver request threads.
+DB_POOL_ENABLED = os.environ.get("DB_POOL_ENABLED", "true").lower() in {"1", "true", "yes"}
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -87,7 +89,13 @@ DATABASES = {
         "PASSWORD": os.environ["DB_PASSWORD"],
         "HOST": os.environ["DB_HOST"],
         "PORT": "5432",
-        "OPTIONS": {"sslmode": "require"},
+        "OPTIONS": {
+            "sslmode": "require",
+            **({"pool": {"min_size": 1, "max_size": 4, "timeout": 10}} if DB_POOL_ENABLED else {}),
+        },
+        # Django returns the connection to the shared pool at the end of a request.
+        "CONN_MAX_AGE": 0 if DB_POOL_ENABLED else int(os.environ.get("DB_CONN_MAX_AGE", "60")),
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
@@ -114,9 +122,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-cl'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Santiago'
 
 USE_I18N = True
 
